@@ -1,0 +1,39 @@
+{
+  "name": "giaohangdn",
+  "version": "1.0.0",
+  "description": "Ứng dụng giao hàng Đà Nẵng",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win --x64"
+  },
+  "build": {
+    "appId": "com.giaohangdn.app",
+    "productName": "GiaoHangDN",
+    "copyright": "GiaoHangDN 2026",
+    "win": {
+      "target": "portable",
+      "icon": "icon.png"
+    },
+    "files": [
+      "**/*",
+      "!node_modules/**",
+      "node_modules/electron/**"
+    ],
+    "directories": {
+      "output": "dist"
+    }
+  },
+  "keywords": [
+    "delivery",
+    "danang",
+    "giaohang"
+  ],
+  "author": "GiaoHangDN",
+  "license": "MIT",
+  "devDependencies": {
+    "@electron/packager": "^20.0.0",
+    "electron": "^31.7.7",
+    "electron-builder": "^24.13.3"
+  }
+}

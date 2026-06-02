@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kết nối Firebase – GiaoHangDN</title>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:'Segoe UI',sans-serif; background:#0f172a; color:#e2e8f0; min-height:100vh; }
+
+    .top-bar { background:#FF6B35; padding:16px 24px; display:flex; align-items:center; gap:12px; }
+    .top-bar h1 { font-size:1.1rem; color:white; font-weight:700; }
+    .progress-bar { height:6px; background:#1e293b; }
+    .progress-fill { height:100%; background:#FF6B35; transition:width .4s; border-radius:0 3px 3px 0; }
+
+    .content { max-width:780px; margin:0 auto; padding:28px 20px; }
+
+    .step-card {
+      background:#1e293b; border-radius:14px; margin-bottom:16px;
+      overflow:hidden; border:2px solid transparent; transition:border-color .2s;
+    }
+    .step-card.active   { border-color:#FF6B35; }
+    .step-card.done     { border-color:#22c55e; }
+    .step-card.locked   { opacity:.5; }
+
+    .step-head {
+      display:flex; align-items:center; gap:14px;
+      padding:16px 20px; cursor:pointer;
+    }
+    .step-num {
+      width:36px; height:36px; border-radius:50%; display:flex;
+      align-items:center; justify-content:center; font-weight:700;
+      font-size:.9rem; flex-shrink:0;
+    }
+    .step-num.pending  { background:#334155; color:#94a3b8; }
+    .step-num.active   { background:#FF6B35; color:white; }
+    .step-num.done     { background:#22c55e; color:white; font-size:1rem; }
+    .step-num.locked   { background:#1e293b; color:#475569; border:2px solid #334155; }
+
+    .step-title  { font-weight:700; font-size:1rem; }
+    .step-sub    { font-size:.82rem; color:#64748b; margin-top:2px; }
+    .step-check  { margin-left:auto; font-size:1.2rem; }
+
+    .step-body   { padding:0 20px 20px; display:none; }
+    .step-body.open { display:block; }
+
+    .instruction {
+      display:flex; gap:14px; align-items:flex-start;
+      padding:12px 0; border-bottom:1px solid #334155;
+    }
+    .instruction:last-child { border-bottom:none; }
+    .inst-num {
+      background:#FF6B35; color:white; width:24px; height:24px;
+      border-radius:50%; display:flex; align-items:center; justify-content:center;
+      font-size:.78rem; font-weight:700; flex-shrink:0; margin-top:2px;
+    }
+    .inst-text { color:#cbd5e1; font-size:.92rem; line-height:1.6; flex:1; }
+    .inst-text strong { color:white; }
+    .inst-text code {
+      background:#0f172a; color:#fb923c; padding:2px 7px;
+      border-radius:4px; font-family:monospace; font-size:.85rem;
+    }
+
+    .img-placeholder {
+      background:#0f172a; border:2px dashed #334155; border-radius:10px;
+      padding:20px; margin:12px 0; text-align:center; color:#475569; font-size:.85rem;
+    }
+    .img-placeholder .icon { font-size:2rem; display:block; margin-bottom:6px; }
+
+    .screenshot {
+      background:#0f172a; border-radius:10px; padding:16px;
+      margin:12px 0; font-family:monospace; font-size:.82rem;
+      color:#94a3b8; line-height:1.8; border:1px solid #334155;
+    }
+    .screenshot .highlight { color:#fb923c; font-weight:700; }
+    .screenshot .green     { color:#4ade80; }
+    .screenshot .blue      { color:#60a5fa; }
+    .screenshot .gray      { color:#475569; }
+
+    .config-box {
+      background:#0f172a; border-radius:10px; padding:16px; margin:14px 0;
+      border:2px solid #334155; position:relative;
+    }
+    .config-box pre { font-family:monospace; font-size:.82rem; color:#94a3b8; line-height:1.9; overflow-x:auto; }
+    .config-box .k { color:#c084fc; }
+    .config-box .s { color:#4ade80; }
+    .config-box .paste { color:#fbbf24; background:#292524; padding:1px 4px; border-radius:3px; }
+
+    .btn-action {
+      display:inline-flex; align-items:center; gap:8px;
+      background:#FF6B35; color:white; border:none; padding:12px 22px;
+      border-radius:10px; font-size:.95rem; font-weight:700; cursor:pointer;
+      margin-top:14px; transition:background .2s;
+    }
+    .btn-action:hover { background:#e55a25; }
+    .btn-action.green { background:#22c55e; }
+    .btn-action.green:hover { background:#16a34a; }
+    .btn-action.blue  { background:#3b82f6; }
+    .btn-action.blue:hover  { background:#2563eb; }
+
+    .tip {
+      background:#1e3a5f; border-left:4px solid #3b82f6; border-radius:0 8px 8px 0;
+      padding:12px 16px; margin:12px 0; font-size:.88rem; color:#93c5fd;
+    }
+    .tip strong { color:#60a5fa; }
+
+    .warning {
+      background:#3b1f1f; border-left:4px solid #ef4444;
+      border-radius:0 8px 8px 0; padding:12px 16px; margin:12px 0;
+      font-size:.88rem; color:#fca5a5;
+    }
+
+    .success-msg {
+      background:#14532d; border-radius:10px; padding:16px 20px; margin:12px 0;
+      color:#4ade80; font-size:.95rem; display:none; align-items:center; gap:10px;
+    }
+
+    .input-field {
+      width:100%; background:#0f172a; border:2px solid #334155; border-radius:8px;
+      padding:10px 14px; color:#e2e8f0; font-size:.9rem; margin:6px 0 4px;
+      font-family:monospace; outline:none; transition:border-color .2s;
+    }
+    .input-field:focus { border-color:#FF6B35; }
+    .input-label { font-size:.82rem; color:#94a3b8; margin-top:10px; display:block; }
+
+    .status-badge {
+      display:inline-flex; align-items:center; gap:6px;
+      padding:5px 12px; border-radius:20px; font-size:.82rem; font-weight:600;
+    }
+    .status-badge.offline { background:#292524; color:#78716c; }
+    .status-badge.online  { background:#14532d; color:#4ade80; }
+
+    #firebaseStatus { margin:0 20px 16px; }
+
+    .final-box {
+      background:linear-gradient(135deg,#1e3a5f,#1e293b);
+      border:2px solid #3b82f6; border-radius:14px; padding:24px;
+      text-align:center; margin-top:24px;
+    }
+    .final-box h2 { color:#60a5fa; font-size:1.3rem; margin-bottom:10px; }
+    .url-display {
+      background:#0f172a; border-radius:8px; padding:10px 16px;
+      font-family:monospace; color:#4ade80; font-size:1rem; margin:14px 0;
+      word-break:break-all;
+    }
+  </style>
+</head>
+<body>
+
+<div class="top-bar">
+  <span style="font-size:1.5rem">🔥</span>
+  <h1>Kết nối Firebase – Hướng dẫn từng bước cho người mới</h1>
+</div>
+<div class="progress-bar">
+  <div class="progress-fill" id="progressFill" style="width:0%"></div>
+</div>
+
+<div class="content">
+
+  <div id="firebaseStatus">
+    <span class="status-badge offline" id="statusBadge">⚫ Chưa kết nối Firebase</span>
+  </div>
+
+  <!-- ═══ BƯỚC 1 ═══ -->
+  <div class="step-card active" id="card1">
+    <div class="step-head" onclick="toggleStep(1)">
+      <div class="step-num active" id="num1">1</div>
+      <div>
+        <div class="step-title">Tạo tài khoản Firebase</div>
+        <div class="step-sub">Vào website Firebase, đăng nhập Gmail</div>
+      </div>
+      <div class="step-check" id="check1"></div>
+    </div>
+    <div class="step-body open" id="body1">
+      <div class="instruction">
+        <div class="inst-num">1</div>
+        <div class="inst-text">
+          Bấm nút bên dưới để mở Firebase Console (sẽ mở trong trình duyệt)
+          <br><br>
+          <button class="btn-action" onclick="openFirebase()">🔥 Mở Firebase Console</button>
+        </div>
+      </div>
+      <div class="instruction">
+        <div class="inst-num">2</div>
+        <div class="inst-text">
+          Trang hiện ra → bấm nút <strong>"Sign in"</strong> (góc trên phải) → chọn <strong>tài khoản Gmail</strong> của bạn
+        </div>
+      </div>
+      <div class="instruction">
+        <div class="inst-num">3</div>
+        <div class="inst-text">
+          Sau khi đăng nhập, bạn thấy trang chủ Firebase Console.
+          Bấm nút bên dưới khi xong để sang bước tiếp:
+          <br><br>
+          <button class="btn-action green" onclick="markDone(1)">✓ Đã đăng nhập xong</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ BƯỚC 2 ═══ -->
+  <div class="step-card locked" id="card2">
+    <div class="step-head" onclick="toggleStep(2)">
+      <div class="step-num locked" id="num2">2</div>
+      <div>
+        <div class="step-title">Tạo Project mới</div>
+        <div class="step-sub">Tên project: giaohangdn</div>
+      </div>
+      <div class="step-check" id="check2"></div>
+    </div>
+    <div class="step-body" id="body2">
+      <div class="instruction">
+        <div class="inst-num">1</div>
+        <div class="inst-text">
+          Ở trang Firebase Console → bấm <strong>"Add project"</strong> (hoặc "Create a project")
+        </div>
+      </div>
+      <div class="instruction">
+        <div class="inst-num">2</div>
+        <div class="inst-text">
+          Ô <strong>"Project name"</strong> → gõ: <code>giaohangdn</code> → bấm <strong>Continue</strong>
+        </div>
+      </div>
+      <div class="instruction">
+        <div class="inst-num">3</div>
+        <div class="inst-text">
+          Trang tiếp theo có <strong>"Google Analytics"</strong> → <strong>gạt sang OFF</strong> (tắt đi cho đơn giản) → bấm <strong>"Create project"</strong>
+        </div>
+      </div>
+      <div class="instruction">
+        <div class="inst-num">4</div>
+        <div class="inst-text">
+          Chờ ~20 giây cho đến khi thấy dấu ✅ và chữ <strong>"Your new project is ready"</strong> → bấm <strong>Continue</strong>
+          <br><br>
+          <button class="btn-action green" onclick="markDone(2)">✓ Đã tạo project xong</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ BƯỚC 3 ═══ -->
+  <div class="step-card locked" id="card3">
+    <div class="step-head" onclick="toggleStep(3)">
+      <div class="step-num locked" id="num3">3</div>
+      <div>
+        <div class="step-title">Tạo Realtime Database</div>
+        <div class="step-sub">Đây là nơi lưu đơn hàng online</div>
+      </div>
+      <div class="step-check" id="check3"></div>
+    </div>
+    <div class="step-body" id="body3">
+      <div class="instruction">
+        <div class="inst-num">1</div>
+        <div class="inst-text">
+          Ở menu bên trái → bấm <strong>"Build"</strong> → chọn <strong>"Realtime Database"</strong>
+          <div class="screenshot">
+            <span class="gray">📁 Build</span><br>
+            &nbsp;&nbsp;├── <span class="highlight">Realtime Database</span> ← bấm vào đây<br>
+            &nbsp;&nbsp;├── Firestore Database<br>
+            &nbsp;&nbsp;├── Storage<br>
+            &nbsp;&nbsp;└── Hosting
+          </div>
+        </div>
+      </div>
+      <div class="instruction">
+        <div class="inst-num">2</div>
+        <div class="inst-text">
+          Bấm nút <strong>"Create Database"</strong> (màu xanh dương)
+        </div>
+      </div>
+      <div class="instruction">
+        <div class="inst-num">3</div>
+        <div class="inst-text">
+          Hộp thoại hiện ra:
+          <br>• <strong>"Database location"</strong> → chọn <code>Singapore (asia-southeast1)</code> (gần Việt Nam nhất)
+          <br>• Bấm <strong>Next</strong>
+        </div>
+      </div>
+      <div class="instruction">
+        <div class="inst-num">4</div>
+        <div class="inst-text">
+          Trang tiếp theo → chọn <strong>"Start in test mode"</strong> (cho phép đọc/ghi tự do)
+          <div class="screenshot">
+            <span class="highlight">● Start in test mode</span>  ← chọn cái này<br>
+            <span class="gray">○ Start in locked mode</span>
+          </div>
+          → bấm <strong>"Enable"</strong>
+          <br><br>
+          <button class="btn-action green" onclick="markDone(3)">✓ Đã tạo Database xong</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ BƯỚC 4 ═══ -->
+  <div class="step-card locked" id="card4">
+    <div class="step-head" onclick="toggleStep(4)">
+      <div class="step-num locked" id="num4">4</div>
+      <div>
+        <div class="step-title">Đăng ký Web App & lấy Config</div>
+        <div class="step-sub">Lấy "chìa khóa" kết nối vào app</div>
+      </div>
+      <div class="step-check" id="check4"></div>
+    </div>
+    <div class="step-body" id="body4">
+      <div class="instruction">
+        <div class="inst-num">1</div>
+        <div class="inst-text">
+          Bấm biểu tượng <strong>⚙️</strong> cạnh chữ "Project Overview" (góc trên bên trái) → chọn <strong>"Project settings"</strong>
+          <div class="screenshot">
+            <span class="highlight">⚙️ Project settings</span>  ← bấm vào đây<br>
+            <span class="gray">   Usage and billing<br>   Users and permissions</span>
+          </div>
+        </div>
+      </div>
+      <div class="instruction">
+        <div class="inst-num">2</div>
+        <div class="inst-text">
+          Kéo xuống phần <strong>"Your apps"</strong> → bấm biểu tượng <strong><code>&lt;/&gt;</code></strong> (Web)
+          <div class="screenshot">
+            <span class="gray">Your apps</span><br>
+            <span class="highlight">&lt;/&gt;</span>  <span class="gray">iOS  Android  Unity  Flutter</span>
+          </div>
+        </div>
+      </div>
+      <div class="instruction">
+        <div class="inst-num">3</div>
+        <div class="inst-text">
+          Ô <strong>"App nickname"</strong> → gõ <code>giaohangdn-web</code> → bấm <strong>"Register app"</strong>
+        </div>
+      </div>
+      <div class="instruction">
+        <div class="inst-num">4</div>
+        <div class="inst-text">
+          Trang tiếp theo sẽ hiện đoạn code. Bạn sẽ thấy dạng như thế này:
+          <div class="screenshot">
+            <span class="gray">const firebaseConfig = {</span><br>
+            &nbsp;&nbsp;<span class="blue">apiKey:</span> <span class="highlight">"AIzaSy..."</span>,<br>
+            &nbsp;&nbsp;<span class="blue">authDomain:</span> <span class="highlight">"giaohangdn.firebaseapp.com"</span>,<br>
+            &nbsp;&nbsp;<span class="blue">databaseURL:</span> <span class="highlight">"https://giaohangdn...firebasedatabase.app"</span>,<br>
+            &nbsp;&nbsp;<span class="blue">projectId:</span> <span class="highlight">"giaohangdn"</span>,<br>
+            &nbsp;&nbsp;<span class="blue">storageBucket:</span> <span class="highlight">"giaohangdn.appspot.com"</span>,<br>
+            &nbsp;&nbsp;<span class="blue">messagingSenderId:</span> <span class="highlight">"123456789"</span>,<br>
+            &nbsp;&nbsp;<span class="blue">appId:</span> <span class="highlight">"1:123..."</span><br>
+            <span class="gray">};</span>
+          </div>
+          <div class="warning">⚠️ <strong>Quan trọng:</strong> Phải có dòng <code>databaseURL</code>. Nếu không thấy dòng này → quay lại Bước 3 tạo Realtime Database trước!</div>
+          → Bấm <strong>Continue to console</strong>
+          <br><br>
+          <button class="btn-action green" onclick="markDone(4)">✓ Đã thấy config xong</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ BƯỚC 5 ═══ -->
+  <div class="step-card locked" id="card5">
+    <div class="step-head" onclick="toggleStep(5)">
+      <div class="step-num locked" id="num5">5</div>
+      <div>
+        <div class="step-title">Dán Config vào app.js</div>
+        <div class="step-sub">Điền từng giá trị vào ô bên dưới</div>
+      </div>
+      <div class="step-check" id="check5"></div>
+    </div>
+    <div class="step-body" id="body5">
+      <div class="instruction">
+        <div class="inst-num">1</div>
+        <div class="inst-text">
+          Nhìn vào đoạn config Firebase bạn vừa lấy → <strong>điền từng giá trị</strong> vào các ô bên dưới:
+        </div>
+      </div>
+
+      <label class="input-label">apiKey (dài nhất, bắt đầu bằng "AIzaSy...")</label>
+      <input class="input-field" id="f_apiKey" placeholder='AIzaSy...' oninput="updatePreview()">
+
+      <label class="input-label">authDomain</label>
+      <input class="input-field" id="f_authDomain" placeholder='ten-project.firebaseapp.com' oninput="updatePreview()">
+
+      <label class="input-label">databaseURL ⭐ (quan trọng nhất!)</label>
+      <input class="input-field" id="f_databaseURL" placeholder='https://ten-project-default-rtdb.asia-southeast1.firebasedatabase.app' oninput="updatePreview()">
+
+      <label class="input-label">projectId</label>
+      <input class="input-field" id="f_projectId" placeholder='ten-project' oninput="updatePreview()">
+
+      <label class="input-label">storageBucket</label>
+      <input class="input-field" id="f_storageBucket" placeholder='ten-project.appspot.com' oninput="updatePreview()">
+
+      <label class="input-label">messagingSenderId (toàn số)</label>
+      <input class="input-field" id="f_messagingSenderId" placeholder='123456789012' oninput="updatePreview()">
+
+      <label class="input-label">appId</label>
+      <input class="input-field" id="f_appId" placeholder='1:123456789012:web:abc123def456' oninput="updatePreview()">
+
+      <div style="margin-top:16px;font-size:.88rem;color:#94a3b8;margin-bottom:8px">📋 Xem trước — sẽ được tự động ghi vào app.js:</div>
+      <div class="config-box" id="configPreview">
+        <pre id="previewCode"><span style="color:#475569">← Điền các ô trên để xem preview</span></pre>
+      </div>
+
+      <div class="instruction" style="margin-top:8px">
+        <div class="inst-num">2</div>
+        <div class="inst-text">
+          Khi đã điền xong tất cả → bấm nút bên dưới để <strong>tự động ghi vào app.js</strong>:
+          <br><br>
+          <button class="btn-action" id="btnSave" onclick="saveConfig()">💾 Lưu Config vào app.js</button>
+          &nbsp;
+          <button class="btn-action blue" onclick="copyConfig()" id="btnCopy" style="display:none">📋 Sao chép config</button>
+          <div class="success-msg" id="saveSuccess">
+            ✅ Đã lưu thành công! Config đã được ghi vào app.js
+          </div>
+          <div class="tip" id="copyTip" style="display:none">
+            Nếu nút Lưu không hoạt động: bấm <strong>Sao chép config</strong> → mở file <code>app.js</code> bằng Notepad → tìm dòng <code>const FIREBASE_CONFIG</code> → xóa cả khối và dán đoạn vừa copy vào.
+          </div>
+          <br>
+          <button class="btn-action green" id="btnNext5" onclick="markDone(5)" style="display:none">✓ Tiếp tục bước 6</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ BƯỚC 6 ═══ -->
+  <div class="step-card locked" id="card6">
+    <div class="step-head" onclick="toggleStep(6)">
+      <div class="step-num locked" id="num6">6</div>
+      <div>
+        <div class="step-title">Mở quyền Database Rules</div>
+        <div class="step-sub">Cho phép app đọc & ghi data</div>
+      </div>
+      <div class="step-check" id="check6"></div>
+    </div>
+    <div class="step-body" id="body6">
+      <div class="instruction">
+        <div class="inst-num">1</div>
+        <div class="inst-text">
+          Quay lại Firebase Console → <strong>Build → Realtime Database</strong> → tab <strong>"Rules"</strong>
+          <div class="screenshot">
+            <span class="gray">Data &nbsp; </span><span class="highlight">Rules</span><span class="gray"> &nbsp; Backups &nbsp; Usage</span><br>
+            <span class="gray">─────────────────────</span>
+          </div>
+        </div>
+      </div>
+      <div class="instruction">
+        <div class="inst-num">2</div>
+        <div class="inst-text">
+          Xóa nội dung cũ trong ô Rules → dán đoạn code này vào:
+          <div class="config-box">
+            <pre>{
+  <span class="k">"rules"</span>: {
+    <span class="k">".read"</span>:  <span class="s">true</span>,
+    <span class="k">".write"</span>: <span class="s">true</span>
+  }
+}</pre>
+          </div>
+          <button class="btn-action blue" onclick="copyRules()">📋 Copy đoạn code này</button>
+        </div>
+      </div>
+      <div class="instruction">
+        <div class="inst-num">3</div>
+        <div class="inst-text">
+          Bấm nút <strong>"Publish"</strong> (màu xanh) để lưu Rules
+          <br><br>
+          <button class="btn-action green" onclick="markDone(6)">✓ Đã bấm Publish xong</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ BƯỚC 7 ═══ -->
+  <div class="step-card locked" id="card7">
+    <div class="step-head" onclick="toggleStep(7)">
+      <div class="step-num locked" id="num7">7</div>
+      <div>
+        <div class="step-title">Kiểm tra kết nối</div>
+        <div class="step-sub">Mở app và thử đặt đơn hàng</div>
+      </div>
+      <div class="step-check" id="check7"></div>
+    </div>
+    <div class="step-body" id="body7">
+      <div class="instruction">
+        <div class="inst-num">1</div>
+        <div class="inst-text">
+          Bấm nút bên dưới để mở app GiaoHangDN:
+          <br><br>
+          <button class="btn-action" onclick="openApp()">🛵 Mở GiaoHangDN</button>
+        </div>
+      </div>
+      <div class="instruction">
+        <div class="inst-num">2</div>
+        <div class="inst-text">
+          Nhìn vào góc trên header — nếu thấy badge <strong style="color:#4ade80">🟢 Online</strong> → Firebase đã kết nối!
+          <div class="screenshot">
+            <span class="green">🛵 GiaoHangDN &nbsp; 🟢 Online</span>  ← phải thấy badge này
+          </div>
+        </div>
+      </div>
+      <div class="instruction">
+        <div class="inst-num">3</div>
+        <div class="inst-text">
+          Thử đặt 1 đơn hàng bất kỳ → quay lại Firebase Console → <strong>Realtime Database → Data</strong>
+          → Nếu thấy data xuất hiện là thành công 100%!
+          <div class="screenshot">
+            <span class="gray">giaohangdn</span><br>
+            &nbsp;&nbsp;<span class="green">└── orders</span><br>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="green">└── GH123456</span><br>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="gray">├── customer: "Nguyễn Văn A"</span><br>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="gray">├── total: 70000</span><br>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="gray">└── status: "pending"</span>
+          </div>
+          <br>
+          <button class="btn-action green" onclick="markDone(7)">✓ Thấy badge 🟢 Online và data!</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- HOÀN THÀNH -->
+  <div class="final-box" id="finalBox" style="display:none">
+    <div style="font-size:3rem;margin-bottom:12px">🎉</div>
+    <h2>Firebase đã kết nối thành công!</h2>
+    <p style="color:#93c5fd;margin-bottom:16px">Giờ đây mọi thiết bị đều đồng bộ real-time</p>
+    <div style="background:#0f172a;border-radius:10px;padding:14px;text-align:left;margin-bottom:16px">
+      <div style="color:#94a3b8;font-size:.85rem;margin-bottom:8px">✅ Khách đặt đơn trên điện thoại → tài xế thấy ngay</div>
+      <div style="color:#94a3b8;font-size:.85rem;margin-bottom:8px">✅ Admin thấy tất cả đơn real-time</div>
+      <div style="color:#94a3b8;font-size:.85rem">✅ Dữ liệu không bao giờ mất</div>
+    </div>
+    <p style="color:#fbbf24;font-size:.9rem;margin-bottom:14px">Bước tiếp theo: Deploy lên internet để có link chia sẻ cho khách</p>
+    <a href="HUONG_DAN_KIEM_TIEN.html" class="btn-action" style="display:inline-flex;text-decoration:none">
+      📖 Xem kế hoạch kiếm tiền →
+    </a>
+  </div>
+
+</div>
+
+<script>
+const totalSteps = 7;
+let doneSteps = new Set();
+
+function openFirebase() {
+  try {
+    require('electron').ipcRenderer.send('open-url', 'https://console.firebase.google.com');
+  } catch(e) {
+    window.open('https://console.firebase.google.com');
+  }
+}
+function openApp() {
+  window.location.href = 'index.html';
+}
+
+function toggleStep(n) {
+  const body = document.getElementById('body' + n);
+  if (body) body.classList.toggle('open');
+}
+
+function markDone(n) {
+  doneSteps.add(n);
+
+  // Mark current step done
+  document.getElementById('card' + n).classList.remove('active');
+  document.getElementById('card' + n).classList.add('done');
+  document.getElementById('num' + n).className = 'step-num done';
+  document.getElementById('num' + n).textContent = '✓';
+  document.getElementById('check' + n).textContent = '';
+  document.getElementById('body' + n).classList.remove('open');
+
+  // Unlock next step
+  const next = n + 1;
+  if (next <= totalSteps) {
+    document.getElementById('card' + next).classList.remove('locked');
+    document.getElementById('card' + next).classList.add('active');
+    document.getElementById('num' + next).className = 'step-num active';
+    document.getElementById('body' + next).classList.add('open');
+    document.getElementById('card' + next).scrollIntoView({ behavior:'smooth', block:'start' });
+  }
+
+  // Progress bar
+  document.getElementById('progressFill').style.width = (doneSteps.size / totalSteps * 100) + '%';
+
+  // Show final box
+  if (doneSteps.size === totalSteps) {
+    document.getElementById('finalBox').style.display = 'block';
+    document.getElementById('finalBox').scrollIntoView({ behavior:'smooth' });
+  }
+}
+
+function getConfigValues() {
+  return {
+    apiKey:            document.getElementById('f_apiKey').value.trim(),
+    authDomain:        document.getElementById('f_authDomain').value.trim(),
+    databaseURL:       document.getElementById('f_databaseURL').value.trim(),
+    projectId:         document.getElementById('f_projectId').value.trim(),
+    storageBucket:     document.getElementById('f_storageBucket').value.trim(),
+    messagingSenderId: document.getElementById('f_messagingSenderId').value.trim(),
+    appId:             document.getElementById('f_appId').value.trim(),
+  };
+}
+
+function updatePreview() {
+  const v = getConfigValues();
+  const filled = Object.values(v).filter(x=>x).length;
+  if (filled === 0) return;
+
+  const preview = document.getElementById('previewCode');
+  preview.innerHTML = `<span style="color:#c084fc">const</span> <span style="color:#60a5fa">FIREBASE_CONFIG</span> <span style="color:#94a3b8">= {</span>\n` +
+    Object.entries(v).map(([k,val]) =>
+      `  <span style="color:#c084fc">${k}:</span>            <span style="color:#4ade80">"${val || '...'}"</span>,`
+    ).join('\n') +
+    `\n<span style="color:#94a3b8">};</span>`;
+}
+
+function buildConfigBlock(v) {
+  return `const FIREBASE_CONFIG = {
+  apiKey:            "${v.apiKey}",
+  authDomain:        "${v.authDomain}",
+  databaseURL:       "${v.databaseURL}",
+  projectId:         "${v.projectId}",
+  storageBucket:     "${v.storageBucket}",
+  messagingSenderId: "${v.messagingSenderId}",
+  appId:             "${v.appId}",
+};`;
+}
+
+function copyConfig() {
+  const v = getConfigValues();
+  const empty = Object.entries(v).filter(([k,val])=>!val).map(([k])=>k);
+  if (empty.length > 0) { alert('Chưa điền đủ!\nCòn thiếu: ' + empty.join(', ')); return; }
+  navigator.clipboard.writeText(buildConfigBlock(v)).then(() => {
+    document.getElementById('btnCopy').textContent = '✅ Đã copy!';
+    document.getElementById('btnCopy').style.background = '#22c55e';
+    document.getElementById('btnNext5').style.display = 'inline-flex';
+    setTimeout(() => {
+      document.getElementById('btnCopy').textContent = '📋 Sao chép config';
+      document.getElementById('btnCopy').style.background = '';
+    }, 3000);
+  });
+}
+
+function saveConfig() {
+  const v = getConfigValues();
+
+  const empty = Object.entries(v).filter(([k,val])=>!val).map(([k])=>k);
+  if (empty.length > 0) {
+    alert('Chưa điền đủ!\nCòn thiếu: ' + empty.join(', '));
+    return;
+  }
+
+  // Hiện nút copy phòng khi write file thất bại
+  document.getElementById('btnCopy').style.display = 'inline-flex';
+  document.getElementById('copyTip').style.display = 'block';
+
+  try {
+    const fs   = require('fs');
+    const path = require('path');
+    const appJsPath = path.join(__dirname, 'app.js');
+    let content = fs.readFileSync(appJsPath, 'utf8');
+    content = content.replace(/const FIREBASE_CONFIG = \{[\s\S]*?\};/, buildConfigBlock(v));
+    fs.writeFileSync(appJsPath, content, 'utf8');
+
+    document.getElementById('saveSuccess').style.display = 'flex';
+    document.getElementById('btnNext5').style.display   = 'inline-flex';
+    document.getElementById('btnSave').style.background = '#22c55e';
+    document.getElementById('btnSave').textContent      = '✅ Đã lưu!';
+    document.getElementById('copyTip').style.display   = 'none';
+  } catch(e) {
+    document.getElementById('btnSave').textContent = '❌ Lỗi – dùng nút Sao chép';
+    document.getElementById('btnSave').style.background = '#ef4444';
+  }
+}
+
+function copyRules() {
+  const rules = `{
+  "rules": {
+    ".read":  true,
+    ".write": true
+  }
+}`;
+  navigator.clipboard.writeText(rules).then(() => {
+    event.target.textContent = '✓ Đã copy!';
+    event.target.style.background = '#22c55e';
+    setTimeout(() => {
+      event.target.textContent = '📋 Copy đoạn code này';
+      event.target.style.background = '';
+    }, 2000);
+  });
+}
+</script>
+</body>
+</html>

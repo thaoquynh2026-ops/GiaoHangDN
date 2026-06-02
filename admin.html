@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' https: data: blob: wss:">
+  <title>GiaoHangDN – Quản lý</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <link rel="stylesheet" href="style.css">
+  <style>.hidden{display:none!important}</style>
+</head>
+<body class="admin-page">
+<header>
+  <div class="header-content">
+    <div class="logo">⚙️ Quản lý GiaoHangDN
+      <span id="onlineBadge" style="display:none;background:#22c55e;color:white;font-size:.7rem;padding:2px 8px;border-radius:20px;margin-left:8px;vertical-align:middle">🟢 Online</span>
+    </div>
+    <div class="header-right">
+      <a href="index.html" class="link-small">← Khách hàng</a>
+      <a href="driver.html" class="link-small">Tài xế</a>
+    </div>
+  </div>
+</header>
+
+<div class="container">
+  <div class="stats-row">
+    <div class="stat-card green"><div class="stat-num" id="sTotalOrders">0</div><div class="stat-label">Tổng đơn</div></div>
+    <div class="stat-card orange"><div class="stat-num" id="sPending">0</div><div class="stat-label">Chờ xử lý</div></div>
+    <div class="stat-card blue"><div class="stat-num" id="sDelivering">0</div><div class="stat-label">Đang giao</div></div>
+    <div class="stat-card purple"><div class="stat-num" id="sRevenue">0đ</div><div class="stat-label">Doanh thu</div></div>
+  </div>
+
+  <div class="revenue-box">
+    <div class="rev-item"><span>💵 Tiền mặt</span><strong id="revCash">0đ</strong></div>
+    <div class="rev-item"><span>💜 MoMo</span><strong id="revMomo">0đ</strong></div>
+    <div class="rev-item"><span>🏦 Chuyển khoản</span><strong id="revBank">0đ</strong></div>
+    <div class="rev-item"><span>🛵 Tài xế (15%)</span><strong id="revDriver">0đ</strong></div>
+  </div>
+
+  <div class="section-title">🗺️ Bản đồ đơn hàng đang hoạt động</div>
+  <div id="adminMap" style="height:240px;border-radius:12px;margin-bottom:16px;overflow:hidden;background:#f1f5f9"></div>
+
+  <div class="filter-bar">
+    <button class="filter-btn active" onclick="setFilter('all',this)">Tất cả</button>
+    <button class="filter-btn" onclick="setFilter('pending',this)">⏳ Chờ nhận</button>
+    <button class="filter-btn" onclick="setFilter('delivering',this)">🚚 Đang giao</button>
+    <button class="filter-btn" onclick="setFilter('done',this)">✅ Xong</button>
+  </div>
+
+  <div class="section-title">📋 Danh sách đơn hàng</div>
+  <div id="ordersList"></div>
+
+  <div style="text-align:center;margin-top:20px">
+    <button onclick="doDeleteAll()" class="btn-danger">🗑️ Xóa tất cả đơn hàng</button>
+  </div>
+
+  <!-- ⚙️ Cài đặt Telegram -->
+  <div style="margin-top:28px">
+    <button onclick="toggleTgSettings()" style="background:#16213e;border:2px solid #334155;color:#94a3b8;padding:10px 18px;border-radius:10px;cursor:pointer;font-size:14px;width:100%">
+      ⚙️ Cài đặt thông báo Telegram
+    </button>
+    <div id="tgSettings" style="display:none;background:#1e293b;border-radius:12px;padding:16px;margin-top:8px">
+      <p style="color:#94a3b8;font-size:13px;margin-bottom:12px">Nhập thông tin bot Telegram để nhận thông báo đơn hàng mới:</p>
+      <label style="color:#cbd5e1;font-size:13px;display:block;margin-bottom:4px">Bot Token</label>
+      <input id="tgToken" type="text" placeholder="123456789:AAF..." style="width:100%;padding:9px 12px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#fff;font-family:monospace;font-size:13px;margin-bottom:10px">
+      <label style="color:#cbd5e1;font-size:13px;display:block;margin-bottom:4px">Chat ID</label>
+      <input id="tgChatId" type="text" placeholder="-100123456789 hoặc @kenh_cua_ban" style="width:100%;padding:9px 12px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#fff;font-family:monospace;font-size:13px;margin-bottom:12px">
+      <div style="display:flex;gap:8px">
+        <button onclick="saveTgConfig()" style="flex:2;background:#22c55e;color:#fff;border:none;padding:10px;border-radius:8px;font-weight:700;cursor:pointer">💾 Lưu</button>
+        <button onclick="testTg()"      style="flex:1;background:#3b82f6;color:#fff;border:none;padding:10px;border-radius:8px;font-weight:700;cursor:pointer">🧪 Test</button>
+      </div>
+      <p style="color:#64748b;font-size:12px;margin-top:10px">
+        Chưa có bot? Nhắn <strong style="color:#90cdf4">@BotFather</strong> trên Telegram → /newbot → lấy token.<br>
+        Chat ID: nhắn @userinfobot để lấy ID của bạn.
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="app.js"></script>
+<script>
+let currentFilter = 'all';
+let adminMap      = null;
+let adminMarkers  = [];
+let _prevTotal    = -1;
+const payLabel    = { cash:'💵 Tiền mặt', momo:'💜 MoMo', bank:'🏦 Chuyển khoản' };
+const statusBadge = {
+  pending:    '<span class="badge badge-pending">⏳ Chờ nhận</span>',
+  delivering: '<span class="badge badge-delivering">🚚 Đang giao</span>',
+  done:       '<span class="badge badge-done">✅ Xong</span>',
+};
+
+Notification.requestPermission();
+
+function beepAdmin() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.frequency.value = 520;
+    osc.type = 'sine';
+    gain.gain.setValueAtTime(0.4, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.5);
+  } catch(e) {}
+}
+
+// Init map
+try {
+  adminMap = L.map('adminMap').setView([16.0544, 108.2022], 12);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution:'© OpenStreetMap' }).addTo(adminMap);
+} catch(e) {
+  document.getElementById('adminMap').innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#64748b">🗺️ Bản đồ cần kết nối internet</div>';
+}
+
+// ── RENDER ────────────────────────────────────────────
+function render(orders) {
+  // Thông báo đơn mới
+  if (_prevTotal >= 0 && orders.length > _prevTotal) {
+    beepAdmin();
+    if (Notification.permission === 'granted') {
+      const latest = orders[0];
+      new Notification('📦 Đơn hàng mới!', {
+        body: latest ? `${latest.customer} – ${formatPrice(latest.total)}` : 'Có đơn hàng mới',
+      });
+    }
+  }
+  _prevTotal = orders.length;
+
+  // Stats
+  document.getElementById('sTotalOrders').textContent = orders.length;
+  document.getElementById('sPending').textContent     = orders.filter(o=>o.status==='pending').length;
+  document.getElementById('sDelivering').textContent  = orders.filter(o=>o.status==='delivering').length;
+  const done = orders.filter(o=>o.status==='done');
+  const rev  = done.reduce((s,o)=>s+o.total,0);
+  document.getElementById('sRevenue').textContent  = formatPrice(rev);
+  document.getElementById('revCash').textContent   = formatPrice(done.filter(o=>o.payMethod==='cash').reduce((s,o)=>s+o.total,0));
+  document.getElementById('revMomo').textContent   = formatPrice(done.filter(o=>o.payMethod==='momo').reduce((s,o)=>s+o.total,0));
+  document.getElementById('revBank').textContent   = formatPrice(done.filter(o=>o.payMethod==='bank').reduce((s,o)=>s+o.total,0));
+  document.getElementById('revDriver').textContent = formatPrice(Math.round(rev*0.15));
+
+  // Bản đồ
+  if (adminMap) {
+    adminMarkers.forEach(m => adminMap.removeLayer(m));
+    adminMarkers = [];
+    orders.filter(o=>o.status!=='done').forEach(o => {
+      const rest = RESTAURANTS.find(r=>r.name===o.restaurantName);
+      if (!rest) return;
+      const emoji = o.status==='pending' ? '🔵' : '🟠';
+      const icon  = L.divIcon({ html:`<div style="font-size:1.3rem">${emoji}</div>`, className:'', iconSize:[28,28] });
+      const m     = L.marker([rest.lat, rest.lng], {icon}).addTo(adminMap);
+      m.bindPopup(`<b>#${o.id}</b> – ${o.customer}<br>${o.address}<br>${statusBadge[o.status]||''}`);
+      adminMarkers.push(m);
+    });
+  }
+
+  // Danh sách đơn
+  const filtered = currentFilter==='all' ? orders : orders.filter(o=>o.status===currentFilter);
+  document.getElementById('ordersList').innerHTML = filtered.length===0
+    ? '<div class="empty-state">Không có đơn hàng nào</div>'
+    : filtered.map(o => `
+      <div class="order-card ${o.status}">
+        <div class="order-header">
+          <span class="order-id">#${o.id}</span>
+          ${statusBadge[o.status]||''}
+          <span class="order-time">${o.time}</span>
+        </div>
+        <div class="order-customer">👤 <strong>${o.customer}</strong> &nbsp;<a href="tel:${o.phone}" style="color:#f59e0b;font-weight:700;text-decoration:none">📞 ${o.phone}</a></div>
+        <div class="order-address">📍 ${o.address}</div>
+        <div class="order-address">🏪 ${o.restaurantName}</div>
+        ${o.note?`<div class="order-note">📝 ${o.note}</div>`:''}
+        <div class="order-items">${o.items.map(i=>`${i.emoji} ${i.name} x${i.qty}`).join(', ')}</div>
+        <div class="order-footer">
+          <div>
+            <span class="order-total">${formatPrice(o.total)}</span>
+            <span class="pay-method">${payLabel[o.payMethod]||o.payMethod}</span>
+            ${o.driver?`<span class="driver-tag">🛵 ${o.driver}</span>`:''}
+          </div>
+          <div class="admin-actions">
+            ${o.status==='pending'    ? `<button class="btn-sm btn-accept" onclick="doUpdate('${o._key||o.id}','delivering')">Duyệt</button>` : ''}
+            ${o.status==='delivering' ? `<button class="btn-sm btn-done"   onclick="doUpdate('${o._key||o.id}','done')">Xong</button>`   : ''}
+            <button class="btn-sm" style="background:#fee2e2;color:#dc2626" onclick="doDelete('${o._key||o.id}')">Xóa</button>
+          </div>
+        </div>
+      </div>`).join('');
+}
+
+function setFilter(f, el) {
+  currentFilter = f;
+  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+  // re-render bằng cách gọi lại listener (chỉ cần trigger manual)
+  const list = loadOrders();
+  if (list.length > 0 || !_useFirebase) render(list);
+}
+
+function doUpdate(key, status) {
+  updateOrder(key, { status });
+}
+
+function doDelete(key) {
+  if (!confirm('Xóa đơn hàng này?')) return;
+  removeOrder(key);
+}
+
+function doDeleteAll() {
+  if (!confirm('Xóa TẤT CẢ đơn hàng? Không thể hoàn tác!')) return;
+  clearAllOrders();
+}
+
+// ── TELEGRAM SETTINGS ─────────────────────────────────
+function toggleTgSettings() {
+  const el = document.getElementById('tgSettings');
+  el.style.display = el.style.display === 'none' ? 'block' : 'none';
+  if (el.style.display === 'block') loadTgConfig();
+}
+
+function loadTgConfig() {
+  try {
+    const s = JSON.parse(localStorage.getItem('ghn_tg_config') || '{}');
+    document.getElementById('tgToken').value  = s.token  || '';
+    document.getElementById('tgChatId').value = s.chatId || '';
+  } catch(e) {}
+}
+
+function saveTgConfig() {
+  const token  = document.getElementById('tgToken').value.trim();
+  const chatId = document.getElementById('tgChatId').value.trim();
+  if (!token || !chatId) { alert('Vui lòng nhập đủ Token và Chat ID!'); return; }
+  localStorage.setItem('ghn_tg_config', JSON.stringify({ token, chatId }));
+  TG_CONFIG.token  = token;
+  TG_CONFIG.chatId = chatId;
+  alert('✅ Đã lưu! Tao sẽ gửi thông báo Telegram khi có đơn mới.');
+}
+
+function testTg() {
+  const token  = document.getElementById('tgToken').value.trim();
+  const chatId = document.getElementById('tgChatId').value.trim();
+  if (!token || !chatId) { alert('Nhập Token và Chat ID trước!'); return; }
+  fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ chat_id: chatId, text: '✅ GiaoHangDN kết nối thành công! Bot đã sẵn sàng nhận đơn hàng.' })
+  }).then(r => r.json()).then(d => {
+    if (d.ok) alert('✅ Gửi thành công! Kiểm tra Telegram của bạn.');
+    else alert('❌ Lỗi: ' + d.description);
+  }).catch(e => alert('❌ Không kết nối được: ' + e.message));
+}
+
+// Load TG config từ localStorage khi khởi động
+(function() {
+  try {
+    const s = JSON.parse(localStorage.getItem('ghn_tg_config') || '{}');
+    if (s.token)  TG_CONFIG.token  = s.token;
+    if (s.chatId) TG_CONFIG.chatId = s.chatId;
+  } catch(e) {}
+})();
+
+// ── INIT ──────────────────────────────────────────────
+initFirebase();
+listenOrders(render);
+</script>
+</body>
+</html>

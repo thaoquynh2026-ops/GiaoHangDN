@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' https: data: blob:">
+  <title>GiaoHangDN – Đặt hàng Đà Nẵng</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .hidden { display: none !important; }
+    .pay-option.selected { border-color: #FF6B35 !important; background: #fff7ed !important; }
+  </style>
+</head>
+<body class="customer-page">
+
+<!-- Header -->
+<header>
+  <div class="header-content">
+    <div class="logo">🛵 GiaoHangDN</div>
+    <div class="header-right">
+      <button class="cart-btn" onclick="toggleCart()">
+        🛒 <span id="cartCount">0</span>
+      </button>
+      <a href="driver.html" class="link-small">Tài xế</a>
+      <a href="admin.html" class="link-small">Quản lý</a>
+    </div>
+  </div>
+</header>
+
+<!-- Banner -->
+<div class="banner">
+  <h1>🌊 Giao hàng Đà Nẵng</h1>
+  <p>Đặt trong 2 phút – Giao trong 30 phút</p>
+  <div class="search-box">
+    <input type="text" id="searchInput" placeholder="🔍 Tìm quán ăn, món ăn..." oninput="onSearch()">
+  </div>
+</div>
+
+<!-- Tabs -->
+<div class="tabs-bar">
+  <button class="tab-btn active" onclick="switchTab('order', this)">🍽️ Đặt hàng</button>
+  <button class="tab-btn" onclick="switchTab('map', this)">🗺️ Bản đồ quán</button>
+  <button class="tab-btn" onclick="switchTab('track', this)">📦 Theo dõi đơn</button>
+</div>
+
+<!-- TAB: ORDER -->
+<div id="tab-order" class="tab-content active container">
+  <div class="categories">
+    <button class="cat-btn active" onclick="filterCat('all', this)">🍽️ Tất cả</button>
+    <button class="cat-btn" onclick="filterCat('food', this)">🍜 Đồ ăn</button>
+    <button class="cat-btn" onclick="filterCat('drink', this)">🧋 Đồ uống</button>
+    <button class="cat-btn" onclick="filterCat('shop', this)">🛍️ Mua sắm</button>
+    <button class="cat-btn" onclick="filterCat('pharma', this)">💊 Thuốc</button>
+  </div>
+  <div id="restaurantList"></div>
+</div>
+
+<!-- TAB: MAP -->
+<div id="tab-map" class="tab-content">
+  <div id="mapContainer" style="height:calc(100vh - 195px); width:100%;"></div>
+</div>
+
+<!-- TAB: TRACK -->
+<div id="tab-track" class="tab-content container">
+  <div class="section-title">📦 Theo dõi đơn hàng</div>
+  <input type="text" id="trackPhone" placeholder="Nhập số điện thoại đã đặt hàng" class="form-input">
+  <button onclick="trackOrders()" class="btn-primary" style="margin-top:8px">🔍 Tìm đơn hàng</button>
+  <div id="trackResults" style="margin-top:16px"></div>
+</div>
+
+<!-- Cart Sidebar -->
+<div id="cartOverlay" class="cart-overlay" onclick="closeCart()"></div>
+<div id="cartSidebar" class="cart-sidebar">
+  <div class="cart-header">
+    <h3>🛒 Giỏ hàng</h3>
+    <button onclick="closeCart()" class="close-btn">✕</button>
+  </div>
+  <div id="cartRestaurantLabel" class="cart-restaurant-label"></div>
+  <div id="cartItems" class="cart-items">
+    <div class="empty-cart">Giỏ hàng trống 🛒</div>
+  </div>
+  <div class="cart-footer">
+    <div class="cart-total-row"><span>Tạm tính:</span><span id="subTotal">0đ</span></div>
+    <div class="cart-total-row"><span>Phí giao hàng:</span><span>15.000đ</span></div>
+    <div class="cart-total-row bold"><span>Tổng cộng:</span><span id="totalPrice">0đ</span></div>
+    <button class="btn-primary mt10" onclick="showCheckout()">Đặt hàng ngay →</button>
+  </div>
+</div>
+
+<!-- CHECKOUT MODAL – Bước 1: Thông tin -->
+<div id="checkoutModal" class="modal-overlay">
+  <div class="modal">
+    <div id="step1">
+      <h3>📋 Thông tin giao hàng</h3>
+      <input type="text" id="custName" placeholder="Họ và tên *" class="form-input">
+      <input type="tel" id="custPhone" placeholder="Số điện thoại *" class="form-input">
+      <input type="text" id="custAddress" placeholder="Địa chỉ giao hàng *" class="form-input">
+      <textarea id="custNote" placeholder="Ghi chú cho tài xế (không bắt buộc)" class="form-input" rows="2"></textarea>
+
+      <div class="section-title" style="margin-top:12px">💳 Phương thức thanh toán</div>
+      <div class="pay-options">
+        <div class="pay-option selected" id="pay-cash" onclick="selectPay('cash')">
+          <span class="pay-icon">💵</span>
+          <div><div class="pay-name">Tiền mặt</div><div class="pay-sub">Trả khi nhận hàng</div></div>
+          <span class="pay-check" id="check-cash">✓</span>
+        </div>
+        <div class="pay-option" id="pay-momo" onclick="selectPay('momo')">
+          <span class="pay-icon">💜</span>
+          <div><div class="pay-name">Ví MoMo</div><div class="pay-sub">Quét QR thanh toán</div></div>
+          <span class="pay-check hidden" id="check-momo">✓</span>
+        </div>
+        <div class="pay-option" id="pay-bank" onclick="selectPay('bank')">
+          <span class="pay-icon">🏦</span>
+          <div><div class="pay-name">Chuyển khoản</div><div class="pay-sub">Vietcombank</div></div>
+          <span class="pay-check hidden" id="check-bank">✓</span>
+        </div>
+      </div>
+
+      <div id="orderPreview"></div>
+
+      <div class="modal-buttons">
+        <button onclick="closeCheckout()" class="btn-secondary">Hủy</button>
+        <button onclick="goToPayment()" class="btn-primary" style="flex:2">Tiếp theo →</button>
+      </div>
+    </div>
+
+    <!-- Bước 2: Thanh toán -->
+    <div id="step2" class="hidden">
+      <div id="paymentContent"></div>
+      <div class="modal-buttons" style="margin-top:16px">
+        <button onclick="backToStep1()" class="btn-secondary">← Quay lại</button>
+        <button onclick="confirmPayment()" class="btn-primary" style="flex:2">✓ Xác nhận đặt hàng</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SUCCESS MODAL -->
+<div id="successModal" class="modal-overlay">
+  <div class="modal text-center">
+    <div style="font-size:4.5rem;margin-bottom:8px">🎉</div>
+    <h2 style="color:#22c55e;margin-bottom:8px">Đặt hàng thành công!</h2>
+    <div id="successOrderId" style="font-size:1.3rem;font-weight:700;color:#FF6B35;margin:10px 0"></div>
+    <div id="successSummary" style="background:#f8fafc;border-radius:10px;padding:14px;margin:12px 0;text-align:left;font-size:.9rem"></div>
+    <p style="color:#64748b;margin-bottom:6px">🛵 Tài xế sẽ đến trong <strong>20–30 phút</strong></p>
+    <p style="color:#64748b;font-size:.85rem">Theo dõi đơn tại tab <strong>Theo dõi đơn</strong></p>
+    <button onclick="closeSuccess()" class="btn-primary mt10">OK, tiếp tục mua sắm</button>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="app.js"></script>
+<script>
+// ─── STATE ───
+let cart = [];
+let selectedRestaurantId = null;
+let currentCat = 'all';
+let searchQuery = '';
+let selectedPay = 'cash';
+let map = null;
+let mapInitialized = false;
+let pendingOrderData = null; // holds customer info while on step2
+
+// ─── RESTAURANTS ───
+function renderRestaurants() {
+  let list = RESTAURANTS;
+  if (currentCat !== 'all') list = list.filter(r => r.cat === currentCat);
+  if (searchQuery) {
+    const q = searchQuery.toLowerCase();
+    list = list.filter(r =>
+      r.name.toLowerCase().includes(q) ||
+      r.items.some(i => i.name.toLowerCase().includes(q))
+    );
+  }
+
+  const grid = document.getElementById('restaurantList');
+  if (list.length === 0) {
+    grid.innerHTML = '<div class="empty-state">Không tìm thấy quán nào 😢</div>';
+    return;
+  }
+
+  grid.innerHTML = list.map(r => `
+    <div class="restaurant-card" id="rest-${r.id}">
+      <div class="rest-header" onclick="toggleMenu(${r.id})">
+        <div class="rest-emoji">${r.emoji}</div>
+        <div class="rest-info">
+          <div class="rest-name">${r.name}</div>
+          <div class="rest-meta">⭐ ${r.rating} &nbsp;•&nbsp; 🕐 ${r.time}</div>
+          <div class="rest-meta">📍 ${r.address}</div>
+        </div>
+        <div class="rest-arrow" id="arrow-${r.id}">▼</div>
+      </div>
+      <div class="rest-menu hidden" id="menu-${r.id}">
+        <div class="menu-label">📋 Thực đơn</div>
+        ${r.items.map(item => `
+          <div class="menu-item">
+            <span class="menu-emoji">${item.emoji}</span>
+            <div class="menu-info">
+              <div class="menu-name">${item.name}</div>
+              <div class="menu-price">${formatPrice(item.price)}</div>
+            </div>
+            <button class="add-btn" onclick="addToCart(${r.id}, ${item.id}, this)">+ Thêm</button>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `).join('');
+}
+
+function toggleMenu(restId) {
+  const menu = document.getElementById('menu-' + restId);
+  const arrow = document.getElementById('arrow-' + restId);
+  const isHidden = menu.classList.contains('hidden');
+  menu.classList.toggle('hidden');
+  arrow.textContent = isHidden ? '▲' : '▼';
+
+  if (isHidden) {
+    // Scroll into view smoothly
+    setTimeout(() => {
+      document.getElementById('rest-' + restId).scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }, 50);
+  }
+}
+
+function filterCat(cat, el) {
+  currentCat = cat;
+  document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  renderRestaurants();
+}
+
+function onSearch() {
+  searchQuery = document.getElementById('searchInput').value;
+  renderRestaurants();
+}
+
+// ─── CART ───
+function addToCart(restId, itemId, btn) {
+  // Warn if adding from a different restaurant
+  if (selectedRestaurantId && selectedRestaurantId !== restId) {
+    if (!confirm('Giỏ hàng đang có món từ quán khác.\nXóa và chọn quán mới?')) return;
+    cart = [];
+    selectedRestaurantId = null;
+  }
+
+  selectedRestaurantId = restId;
+  const rest = RESTAURANTS.find(r => r.id === restId);
+  const item = rest.items.find(i => i.id === itemId);
+  const existing = cart.find(x => x.id === itemId);
+
+  if (existing) {
+    existing.qty++;
+  } else {
+    cart.push({ ...item, qty: 1, restId });
+  }
+
+  updateCartUI();
+
+  // Visual feedback on the button
+  const orig = btn.textContent;
+  btn.textContent = '✓ Đã thêm';
+  btn.style.background = '#22c55e';
+  btn.disabled = true;
+  setTimeout(() => {
+    btn.textContent = orig;
+    btn.style.background = '';
+    btn.disabled = false;
+  }, 900);
+}
+
+function changeQty(id, delta) {
+  const item = cart.find(x => x.id === id);
+  if (!item) return;
+  item.qty += delta;
+  if (item.qty <= 0) {
+    cart = cart.filter(x => x.id !== id);
+    if (cart.length === 0) selectedRestaurantId = null;
+  }
+  updateCartUI();
+}
+
+function updateCartUI() {
+  const count = cart.reduce((s, x) => s + x.qty, 0);
+  const sub   = cart.reduce((s, x) => s + x.price * x.qty, 0);
+  const total = sub + 15000;
+
+  document.getElementById('cartCount').textContent = count;
+  document.getElementById('subTotal').textContent  = formatPrice(sub);
+  document.getElementById('totalPrice').textContent = formatPrice(total);
+
+  // Restaurant tag
+  if (selectedRestaurantId) {
+    const rest = RESTAURANTS.find(r => r.id === selectedRestaurantId);
+    document.getElementById('cartRestaurantLabel').innerHTML =
+      `<span class="rest-tag">${rest.emoji} ${rest.name}</span>`;
+  } else {
+    document.getElementById('cartRestaurantLabel').innerHTML = '';
+  }
+
+  // Cart items
+  if (cart.length === 0) {
+    document.getElementById('cartItems').innerHTML = '<div class="empty-cart">Giỏ hàng trống 🛒</div>';
+    return;
+  }
+  document.getElementById('cartItems').innerHTML = cart.map(item => `
+    <div class="cart-item">
+      <span class="cart-item-name">${item.emoji} ${item.name}</span>
+      <div class="qty-control">
+        <button onclick="changeQty(${item.id}, -1)">−</button>
+        <span>${item.qty}</span>
+        <button onclick="changeQty(${item.id}, 1)">+</button>
+      </div>
+      <span class="cart-item-price">${formatPrice(item.price * item.qty)}</span>
+    </div>
+  `).join('');
+}
+
+function toggleCart() {
+  const sidebar = document.getElementById('cartSidebar');
+  const overlay = document.getElementById('cartOverlay');
+  sidebar.classList.toggle('open');
+  overlay.classList.toggle('show');
+}
+
+function closeCart() {
+  document.getElementById('cartSidebar').classList.remove('open');
+  document.getElementById('cartOverlay').classList.remove('show');
+}
+
+// ─── CHECKOUT ───
+function showCheckout() {
+  if (cart.length === 0) {
+    alert('Vui lòng thêm ít nhất 1 món vào giỏ hàng!');
+    return;
+  }
+
+  const sub   = cart.reduce((s, x) => s + x.price * x.qty, 0);
+  const total = sub + 15000;
+
+  document.getElementById('orderPreview').innerHTML = `
+    <div class="preview-box" style="margin-top:12px">
+      ${cart.map(i => `
+        <div class="preview-row">
+          <span>${i.emoji} ${i.name} x${i.qty}</span>
+          <span>${formatPrice(i.price * i.qty)}</span>
+        </div>
+      `).join('')}
+      <div class="preview-row" style="border-top:1px solid #e2e8f0;margin-top:6px;padding-top:8px">
+        <span>Phí giao hàng</span><span>15.000đ</span>
+      </div>
+      <div class="preview-row" style="font-weight:700;font-size:1rem">
+        <span>Tổng cộng</span><span style="color:#FF6B35">${formatPrice(total)}</span>
+      </div>
+    </div>
+  `;
+
+  // Show modal, reset to step 1
+  document.getElementById('checkoutModal').classList.add('show');
+  document.getElementById('step1').classList.remove('hidden');
+  document.getElementById('step2').classList.add('hidden');
+  closeCart();
+}
+
+function closeCheckout() {
+  document.getElementById('checkoutModal').classList.remove('show');
+}
+
+function selectPay(method) {
+  selectedPay = method;
+  ['cash', 'momo', 'bank'].forEach(m => {
+    document.getElementById('pay-' + m).classList.toggle('selected', m === method);
+    document.getElementById('check-' + m).classList.toggle('hidden', m !== method);
+  });
+}
+
+function goToPayment() {
+  const name    = document.getElementById('custName').value.trim();
+  const phone   = document.getElementById('custPhone').value.trim();
+  const address = document.getElementById('custAddress').value.trim();
+  const note    = document.getElementById('custNote').value.trim();
+
+  if (!name)    { alert('Vui lòng nhập họ tên!');         document.getElementById('custName').focus();    return; }
+  if (!phone)   { alert('Vui lòng nhập số điện thoại!');  document.getElementById('custPhone').focus();   return; }
+  if (!address) { alert('Vui lòng nhập địa chỉ giao!');   document.getElementById('custAddress').focus(); return; }
+
+  // Save for later use in confirmPayment
+  pendingOrderData = { name, phone, address, note };
+
+  const total = cart.reduce((s, x) => s + x.price * x.qty, 0) + 15000;
+  let html = '';
+
+  if (selectedPay === 'momo') {
+    const qrData = `MOMO|${MOMO_INFO.phone}|${MOMO_INFO.name}|${total}|GiaoHangDN don hang`;
+    const qrUrl  = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(qrData)}`;
+    html = `
+      <div class="pay-screen">
+        <div class="pay-logo" style="color:#ae2070;font-size:1.4rem;font-weight:800">💜 MoMo</div>
+        <p style="text-align:center;color:#64748b;margin-bottom:12px">Quét mã QR bằng app MoMo</p>
+        <img src="${qrUrl}" class="qr-img" alt="QR MoMo">
+        <div class="pay-info-box">
+          <div class="pay-info-row"><span>Số điện thoại MoMo</span><strong>${MOMO_INFO.phone}</strong></div>
+          <div class="pay-info-row"><span>Tên tài khoản</span><strong>${MOMO_INFO.name}</strong></div>
+          <div class="pay-info-row"><span>Số tiền</span><strong style="color:#FF6B35;font-size:1.2rem">${formatPrice(total)}</strong></div>
+        </div>
+        <div class="pay-note">Sau khi chuyển xong → bấm <strong>Xác nhận đặt hàng</strong></div>
+      </div>`;
+  } else if (selectedPay === 'bank') {
+    const qrData = `${BANK_INFO.account}|${BANK_INFO.bank}|${total}|GiaoHangDN|${phone}`;
+    const qrUrl  = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(qrData)}`;
+    html = `
+      <div class="pay-screen">
+        <div class="pay-logo" style="color:#006400;font-size:1.4rem;font-weight:800">🏦 Vietcombank</div>
+        <p style="text-align:center;color:#64748b;margin-bottom:12px">Quét QR hoặc chuyển khoản thủ công</p>
+        <img src="${qrUrl}" class="qr-img" alt="QR Bank">
+        <div class="pay-info-box">
+          <div class="pay-info-row"><span>Ngân hàng</span><strong>${BANK_INFO.bank}</strong></div>
+          <div class="pay-info-row"><span>Số tài khoản</span><strong style="letter-spacing:1px">${BANK_INFO.account}</strong></div>
+          <div class="pay-info-row"><span>Chủ tài khoản</span><strong>${BANK_INFO.name}</strong></div>
+          <div class="pay-info-row"><span>Số tiền</span><strong style="color:#FF6B35;font-size:1.2rem">${formatPrice(total)}</strong></div>
+          <div class="pay-info-row"><span>Nội dung CK</span><strong>GiaoHangDN ${phone}</strong></div>
+        </div>
+        <div class="pay-note">Sau khi chuyển xong → bấm <strong>Xác nhận đặt hàng</strong></div>
+      </div>`;
+  } else {
+    html = `
+      <div class="pay-screen">
+        <div style="text-align:center;font-size:4rem;margin-bottom:10px">💵</div>
+        <h3 style="text-align:center;margin-bottom:14px">Thanh toán tiền mặt</h3>
+        <div class="pay-info-box">
+          <div class="pay-info-row"><span>Số tiền cần trả</span><strong style="color:#FF6B35;font-size:1.2rem">${formatPrice(total)}</strong></div>
+          <div class="pay-info-row"><span>Khi nào?</span><strong>Khi tài xế giao hàng đến</strong></div>
+          <div class="pay-info-row"><span>Giao đến</span><strong>${pendingOrderData.address}</strong></div>
+        </div>
+        <div class="pay-note">✅ Chuẩn bị tiền mặt sẵn để giao dịch nhanh hơn</div>
+      </div>`;
+  }
+
+  document.getElementById('paymentContent').innerHTML = html;
+  document.getElementById('step1').classList.add('hidden');
+  document.getElementById('step2').classList.remove('hidden');
+}
+
+function backToStep1() {
+  document.getElementById('step1').classList.remove('hidden');
+  document.getElementById('step2').classList.add('hidden');
+}
+
+function confirmPayment() {
+  if (!pendingOrderData) return;
+  const { name, phone, address, note } = pendingOrderData;
+  const rest  = RESTAURANTS.find(r => r.id === selectedRestaurantId);
+  const total = cart.reduce((s, x) => s + x.price * x.qty, 0) + 15000;
+
+  const order = {
+    id:             genOrderId(),
+    customer:       name,
+    phone,
+    address,
+    note,
+    items:          [...cart],
+    restaurantName: rest ? rest.name : '',
+    total,
+    payMethod:      selectedPay,
+    status:         'pending',
+    time:           new Date().toLocaleString('vi-VN'),
+    driver:         null,
+  };
+
+  // Build success summary
+  const payLabel = { cash: '💵 Tiền mặt', momo: '💜 MoMo', bank: '🏦 Chuyển khoản' };
+  document.getElementById('successOrderId').textContent = `Mã đơn: #${order.id}`;
+  document.getElementById('successSummary').innerHTML = `
+    <div style="margin-bottom:6px"><strong>👤 Khách:</strong> ${name} – ${phone}</div>
+    <div style="margin-bottom:6px"><strong>📍 Giao đến:</strong> ${address}</div>
+    <div style="margin-bottom:6px"><strong>🏪 Quán:</strong> ${order.restaurantName}</div>
+    <div style="margin-bottom:6px"><strong>📦 Món:</strong> ${order.items.map(i => `${i.emoji}${i.name} x${i.qty}`).join(', ')}</div>
+    <div style="margin-bottom:6px"><strong>💰 Tổng:</strong> <span style="color:#FF6B35;font-weight:700">${formatPrice(total)}</span></div>
+    <div><strong>💳 Thanh toán:</strong> ${payLabel[selectedPay]}</div>
+  `;
+
+  // Lưu đơn (Firebase hoặc localStorage) + thông báo Telegram
+  pushOrder(order);
+  sendTelegramAlert(order);
+
+  // Reset cart & close modals
+  cart = [];
+  selectedRestaurantId = null;
+  pendingOrderData = null;
+  updateCartUI();
+  closeCheckout();
+
+  // Show success
+  document.getElementById('successModal').classList.add('show');
+}
+
+function closeSuccess() {
+  document.getElementById('successModal').classList.remove('show');
+  renderRestaurants(); // refresh UI
+}
+
+// ─── TRACK ORDERS ───
+function trackOrders() {
+  const phone = document.getElementById('trackPhone').value.trim();
+  if (!phone) { alert('Vui lòng nhập số điện thoại!'); return; }
+
+  const orders = loadOrders().filter(o => o.phone === phone);
+  const statusLabel = {
+    pending:    '<span class="badge badge-pending">⏳ Chờ tài xế</span>',
+    delivering: '<span class="badge badge-delivering">🚚 Đang giao</span>',
+    done:       '<span class="badge badge-done">✅ Đã nhận hàng</span>',
+  };
+  const payLabel = { cash: '💵 Tiền mặt', momo: '💜 MoMo', bank: '🏦 Chuyển khoản' };
+
+  document.getElementById('trackResults').innerHTML = orders.length === 0
+    ? '<div class="empty-state">Không tìm thấy đơn nào với số điện thoại này</div>'
+    : orders.map(o => `
+      <div class="order-card ${o.status}">
+        <div class="order-header">
+          <span class="order-id">#${o.id}</span>
+          ${statusLabel[o.status] || ''}
+        </div>
+        <div style="color:#64748b;font-size:.85rem;margin-bottom:4px">🕐 ${o.time}</div>
+        <div style="margin-bottom:4px">🏪 <strong>${o.restaurantName}</strong></div>
+        <div style="color:#64748b;font-size:.88rem;margin-bottom:4px">📍 ${o.address}</div>
+        <div style="font-size:.82rem;color:#64748b;margin-bottom:8px">
+          ${o.items.map(i => `${i.emoji} ${i.name} x${i.qty}`).join(' · ')}
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <strong style="color:#FF6B35">${formatPrice(o.total)}</strong>
+          <span style="font-size:.8rem;background:#f1f5f9;padding:3px 8px;border-radius:6px">${payLabel[o.payMethod]||o.payMethod}</span>
+          ${o.driver ? `<span style="color:#f59e0b;font-size:.85rem">🛵 ${o.driver}</span>` : ''}
+        </div>
+      </div>
+    `).join('');
+}
+
+// ─── MAP ───
+function initMap() {
+  if (mapInitialized) return;
+  mapInitialized = true;
+  map = L.map('mapContainer').setView([16.0544, 108.2022], 13);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap'
+  }).addTo(map);
+
+  RESTAURANTS.forEach(r => {
+    const icon = L.divIcon({
+      html: `<div style="background:white;border:2.5px solid #FF6B35;border-radius:50% 50% 50% 0;transform:rotate(-45deg);width:38px;height:38px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,.2)"><span style="transform:rotate(45deg);font-size:1.1rem">${r.emoji}</span></div>`,
+      className: '',
+      iconSize: [38, 38],
+      iconAnchor: [19, 38],
+    });
+    const marker = L.marker([r.lat, r.lng], { icon }).addTo(map);
+    marker.bindPopup(`
+      <div style="min-width:180px;font-family:Segoe UI,sans-serif">
+        <div style="font-weight:700;font-size:.95rem;margin-bottom:4px">${r.emoji} ${r.name}</div>
+        <div style="color:#64748b;font-size:.8rem;margin-bottom:4px">⭐ ${r.rating} &nbsp;•&nbsp; 🕐 ${r.time}</div>
+        <div style="color:#64748b;font-size:.8rem;margin-bottom:8px">📍 ${r.address}</div>
+        <div style="font-size:.8rem;margin-bottom:10px;line-height:1.8">
+          ${r.items.map(i => `${i.emoji} ${i.name} – <strong>${formatPrice(i.price)}</strong>`).join('<br>')}
+        </div>
+        <button onclick="openFromMap(${r.id})" style="background:#FF6B35;color:white;border:none;padding:7px 14px;border-radius:8px;cursor:pointer;font-weight:700;font-size:.85rem;width:100%">Đặt hàng ngay →</button>
+      </div>
+    `);
+  });
+}
+
+function openFromMap(restId) {
+  // Switch to order tab and open the restaurant's menu
+  switchTab('order', document.querySelectorAll('.tab-btn')[0]);
+  setTimeout(() => {
+    const el    = document.getElementById('rest-' + restId);
+    const menu  = document.getElementById('menu-' + restId);
+    const arrow = document.getElementById('arrow-' + restId);
+    if (el)    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (menu)  { menu.classList.remove('hidden'); arrow.textContent = '▲'; }
+  }, 200);
+}
+
+// ─── TABS ───
+function switchTab(name, el) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  el.classList.add('active');
+  if (name === 'map') initMap();
+}
+
+// ─── INIT ───
+(function() {
+  try {
+    const s = JSON.parse(localStorage.getItem('ghn_tg_config') || '{}');
+    if (s.token)  TG_CONFIG.token  = s.token;
+    if (s.chatId) TG_CONFIG.chatId = s.chatId;
+  } catch(e) {}
+})();
+initFirebase();
+renderRestaurants();
+</script>
+</body>
+</html>

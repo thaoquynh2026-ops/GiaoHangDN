@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hướng dẫn kiếm tiền – GiaoHangDN</title>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:'Segoe UI',sans-serif; background:#f8fafc; color:#1e293b; }
+    .hero { background:linear-gradient(135deg,#FF6B35,#ff9f5e); color:white; padding:40px 20px; text-align:center; }
+    .hero h1 { font-size:1.8rem; margin-bottom:8px; }
+    .hero p  { opacity:.9; font-size:1.05rem; }
+    .container { max-width:760px; margin:0 auto; padding:24px 20px; }
+    .step { background:white; border-radius:14px; padding:22px 24px; margin-bottom:16px; box-shadow:0 2px 12px rgba(0,0,0,.07); border-left:5px solid #FF6B35; }
+    .step-num { display:inline-block; background:#FF6B35; color:white; width:32px; height:32px; border-radius:50%; text-align:center; line-height:32px; font-weight:700; margin-right:10px; font-size:.95rem; }
+    .step h2 { display:inline; font-size:1.05rem; }
+    .step p, .step li { color:#475569; font-size:.93rem; line-height:1.7; margin-top:10px; }
+    .step ul { padding-left:20px; }
+    .step code { background:#f1f5f9; padding:2px 8px; border-radius:4px; font-family:monospace; font-size:.88rem; color:#FF6B35; }
+    .highlight { background:#fff7ed; border:2px solid #FF6B35; border-radius:10px; padding:14px 18px; margin:12px 0; }
+    .highlight strong { color:#FF6B35; }
+    .money { color:#22c55e; font-weight:700; font-size:1rem; }
+    .btn-big { display:block; background:#FF6B35; color:white; text-decoration:none; padding:14px; border-radius:12px; text-align:center; font-size:1rem; font-weight:700; margin-top:10px; }
+    .btn-big:hover { background:#e55a25; }
+    .timeline { border-left:3px solid #FF6B35; padding-left:20px; margin-top:12px; }
+    .timeline-item { margin-bottom:14px; position:relative; }
+    .timeline-item::before { content:''; position:absolute; left:-26px; top:4px; width:10px; height:10px; background:#FF6B35; border-radius:50%; }
+    .tag { display:inline-block; padding:3px 10px; border-radius:20px; font-size:.78rem; font-weight:600; margin:2px; }
+    .tag-free { background:#dcfce7; color:#166534; }
+    .tag-paid { background:#fee2e2; color:#dc2626; }
+    .tag-easy { background:#dbeafe; color:#1d4ed8; }
+    h3 { margin-top:14px; margin-bottom:6px; color:#1e293b; }
+  </style>
+</head>
+<body>
+
+<div class="hero">
+  <h1>🛵 Kế hoạch kiếm tiền với GiaoHangDN</h1>
+  <p>Từ app → tiền thật trong 30 ngày</p>
+</div>
+
+<div class="container">
+
+  <!-- BƯỚC 1: FIREBASE -->
+  <div class="step">
+    <span class="step-num">1</span><h2>Kết nối Firebase (đồng bộ mọi thiết bị)</h2>
+    <p>Hiện tại app chỉ lưu data trên 1 máy. Firebase giúp khách đặt trên điện thoại, tài xế thấy ngay trên máy mình.</p>
+    <div class="highlight">
+      <strong>Làm theo 5 bước (miễn phí):</strong>
+      <ol style="padding-left:20px;margin-top:8px;color:#475569;font-size:.92rem;line-height:2">
+        <li>Vào <strong>console.firebase.google.com</strong> → đăng nhập Google</li>
+        <li>Bấm <strong>"Add project"</strong> → đặt tên <code>giaohangdn</code></li>
+        <li>Vào <strong>Build → Realtime Database</strong> → Create database → <em>Start in test mode</em></li>
+        <li>Vào <strong>Project Settings ⚙️ → Your apps → Web</strong> → copy đoạn <code>firebaseConfig</code></li>
+        <li>Mở file <code>app.js</code> → dán config vào <code>FIREBASE_CONFIG = { ... }</code></li>
+      </ol>
+    </div>
+    <span class="tag tag-free">Miễn phí</span>
+    <span class="tag tag-easy">30 phút</span>
+  </div>
+
+  <!-- BƯỚC 2: DEPLOY -->
+  <div class="step">
+    <span class="step-num">2</span><h2>Deploy lên internet (có link chia sẻ)</h2>
+    <p>Sau khi deploy, bạn có URL như <code>giaohangdn.web.app</code> để gửi cho khách hàng.</p>
+    <div class="highlight">
+      <strong>Dùng Firebase Hosting (miễn phí):</strong>
+      <ol style="padding-left:20px;margin-top:8px;color:#475569;font-size:.92rem;line-height:2">
+        <li>Mở terminal → gõ: <code>npm install -g firebase-tools</code></li>
+        <li><code>firebase login</code> (đăng nhập Google)</li>
+        <li>Vào folder GiaoHangDN: <code>cd Desktop\GiaoHangDN</code></li>
+        <li><code>firebase init hosting</code> → chọn project → public directory: <code>.</code> → Single-page: <strong>No</strong></li>
+        <li><code>firebase deploy</code> → lấy URL</li>
+      </ol>
+    </div>
+    <span class="tag tag-free">Miễn phí</span>
+    <span class="tag tag-easy">1 giờ</span>
+  </div>
+
+  <!-- BƯỚC 3: TÀI XẾ -->
+  <div class="step">
+    <span class="step-num">3</span><h2>Tuyển 3–5 tài xế đầu tiên</h2>
+    <p>Đây là bước quan trọng nhất. Không có tài xế = không giao được đơn.</p>
+    <div class="timeline">
+      <div class="timeline-item"><strong>Ngày 1–3:</strong> Đăng lên các group Facebook Đà Nẵng: "Tuyển shipper bán thời gian, chạy theo đơn, 15% hoa hồng"</div>
+      <div class="timeline-item"><strong>Ngày 4–5:</strong> Lập group Zalo với tài xế → gửi link <code>driver.html</code> để họ nhận đơn</div>
+      <div class="timeline-item"><strong>Ngày 6:</strong> Chạy thử 1 đơn giả để tài xế quen luồng</div>
+    </div>
+    <div class="highlight">
+      <strong>Tài xế nhận được:</strong> 15% mỗi đơn. Đơn 100k → tài xế được 15k.<br>
+      <strong>Bạn giữ:</strong> 85% – chi phí quán → lãi ~5–10% mỗi đơn.
+    </div>
+  </div>
+
+  <!-- BƯỚC 4: QUÁN ĂN -->
+  <div class="step">
+    <span class="step-num">4</span><h2>Ký kết với 5–10 quán ăn gần nhà</h2>
+    <p>Đến trực tiếp, nói đơn giản: <em>"Em có app giao hàng, quán chỉ cần nấu, em lo hết phần giao. Quán không mất gì, chỉ trả 10% khi có đơn."</em></p>
+    <ul>
+      <li>Ưu tiên quán chưa có ShopeeFood/GrabFood</li>
+      <li>Quán bình dân, đông khách sinh viên</li>
+      <li>Khu vực: Hải Châu, Thanh Khê, Liên Chiểu</li>
+    </ul>
+    <div class="highlight">
+      <strong>Cập nhật quán vào app:</strong> Mở <code>app.js</code> → tìm <code>RESTAURANTS</code> → thêm quán thật vào mảng đó.
+    </div>
+  </div>
+
+  <!-- BƯỚC 5: MARKETING -->
+  <div class="step">
+    <span class="step-num">5</span><h2>Marketing 0 đồng để có đơn đầu tiên</h2>
+    <ul>
+      <li>📱 Đăng lên <strong>Facebook groups Đà Nẵng</strong>: "Giao hàng nhanh, phí chỉ 15k"</li>
+      <li>💬 Gửi link app vào <strong>group Zalo phòng trọ, khu dân cư</strong></li>
+      <li>🎁 <strong>Tuần đầu miễn phí giao hàng</strong> để có đánh giá đầu tiên</li>
+      <li>📸 Chụp ảnh đơn hàng thật → đăng Facebook Reels</li>
+      <li>🤝 Nhờ quán ăn chia sẻ link app cho khách của họ</li>
+    </ul>
+  </div>
+
+  <!-- DỰ KIẾN THU NHẬP -->
+  <div class="step" style="border-left-color:#22c55e">
+    <span class="step-num" style="background:#22c55e">💰</span><h2>Dự kiến thu nhập</h2>
+    <table style="width:100%;border-collapse:collapse;margin-top:12px;font-size:.9rem">
+      <tr style="background:#f1f5f9">
+        <th style="padding:8px;text-align:left">Giai đoạn</th>
+        <th style="padding:8px;text-align:right">Đơn/ngày</th>
+        <th style="padding:8px;text-align:right">Thu nhập/tháng</th>
+      </tr>
+      <tr><td style="padding:8px">Tháng 1 (thử nghiệm)</td><td style="padding:8px;text-align:right">5–10</td><td style="padding:8px;text-align:right" class="money">1–3 triệu</td></tr>
+      <tr style="background:#f8fafc"><td style="padding:8px">Tháng 2–3 (tăng trưởng)</td><td style="padding:8px;text-align:right">20–40</td><td style="padding:8px;text-align:right" class="money">4–10 triệu</td></tr>
+      <tr><td style="padding:8px">Tháng 4+ (ổn định)</td><td style="padding:8px;text-align:right">50–100</td><td style="padding:8px;text-align:right" class="money">10–25 triệu</td></tr>
+    </table>
+    <p style="font-size:.82rem;margin-top:8px;color:#94a3b8">* Tính trên hoa hồng bạn giữ ~10% mỗi đơn giá trị trung bình 80k</p>
+  </div>
+
+  <div style="text-align:center;padding:20px 0;color:#64748b;font-size:.9rem">
+    Mở app: <a href="index.html" style="color:#FF6B35;font-weight:700">index.html</a> &nbsp;|&nbsp;
+    Tài xế: <a href="driver.html" style="color:#FF6B35;font-weight:700">driver.html</a> &nbsp;|&nbsp;
+    Quản lý: <a href="admin.html" style="color:#FF6B35;font-weight:700">admin.html</a>
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' https: data: blob: wss:">
+  <title>GiaoHangDN – Tài xế</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <link rel="stylesheet" href="style.css">
+  <style>.hidden{display:none!important}</style>
+</head>
+<body class="driver-page">
+<header>
+  <div class="header-content">
+    <div class="logo">🛵 Tài xế GiaoHangDN
+      <span id="onlineBadge" style="display:none;background:#22c55e;color:white;font-size:.7rem;padding:2px 8px;border-radius:20px;margin-left:8px;vertical-align:middle">🟢 Online</span>
+    </div>
+    <div class="header-right">
+      <a href="index.html" class="link-small">← Khách hàng</a>
+      <a href="admin.html" class="link-small">Quản lý</a>
+    </div>
+  </div>
+</header>
+
+<div class="container">
+  <div class="driver-status-bar">
+    <div class="driver-info">
+      <span class="driver-avatar">🧑‍✈️</span>
+      <div>
+        <div class="driver-name" id="driverName">Đang tải...</div>
+        <div class="driver-sub">Hôm nay: <strong id="todayEarnings">0đ</strong> &nbsp;|&nbsp; <span id="completedCount">0</span> đơn xong</div>
+      </div>
+    </div>
+    <div class="toggle-wrap">
+      <span id="statusText" class="status-online">🟢 Nhận đơn</span>
+      <label class="toggle">
+        <input type="checkbox" id="activeToggle" checked onchange="toggleActive()">
+        <span class="slider"></span>
+      </label>
+    </div>
+  </div>
+
+  <div id="driverMap" style="height:240px;border-radius:12px;margin-bottom:16px;overflow:hidden;background:#f1f5f9"></div>
+
+  <div class="tabs-bar" style="margin:0 0 14px">
+    <button class="tab-btn active" id="tabNew" onclick="switchDriverTab('new',this)">📥 Đơn mới <span id="newCount" class="count-badge">0</span></button>
+    <button class="tab-btn" id="tabMine" onclick="switchDriverTab('mine',this)">🚚 Đang giao <span id="mineCount" class="count-badge">0</span></button>
+    <button class="tab-btn" onclick="switchDriverTab('done',this)">✅ Đã xong</button>
+  </div>
+
+  <div id="driverTab-new" class="driver-tab-content"></div>
+  <div id="driverTab-mine" class="driver-tab-content hidden"></div>
+  <div id="driverTab-done" class="driver-tab-content hidden"></div>
+</div>
+
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="app.js"></script>
+<script>
+let driverName = localStorage.getItem('driverName');
+if (!driverName) {
+  driverName = prompt('Nhập tên tài xế của bạn:') || 'Tài xế';
+  localStorage.setItem('driverName', driverName);
+}
+document.getElementById('driverName').textContent = driverName;
+
+const payLabel = { cash:'💵 Tiền mặt', momo:'💜 MoMo', bank:'🏦 Chuyển khoản' };
+
+// ── Thông báo đơn mới ──────────────────────────────────
+let _prevPending = -1; // -1 = lần đầu load, không báo
+Notification.requestPermission();
+
+function beepNew() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    [440, 660, 880].forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.frequency.value = freq;
+      osc.type = 'sine';
+      gain.gain.setValueAtTime(0.3, ctx.currentTime + i * 0.15);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.15 + 0.25);
+      osc.start(ctx.currentTime + i * 0.15);
+      osc.stop(ctx.currentTime + i * 0.15 + 0.3);
+    });
+  } catch(e) {}
+}
+
+function notifyNewOrder(count) {
+  if (Notification.permission === 'granted') {
+    new Notification('🛵 Có đơn hàng mới!', {
+      body: `${count} đơn đang chờ bạn nhận`,
+      icon: '',
+      requireInteraction: false,
+    });
+  }
+}
+
+// Map
+let driverMap = null;
+let orderMarkers = [];
+try {
+  driverMap = L.map('driverMap').setView([16.0544, 108.2022], 13);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution:'© OpenStreetMap' }).addTo(driverMap);
+} catch(e) {
+  document.getElementById('driverMap').innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#64748b">🗺️ Bản đồ cần kết nối internet</div>';
+}
+
+function toggleActive() {
+  const on = document.getElementById('activeToggle').checked;
+  document.getElementById('statusText').textContent = on ? '🟢 Nhận đơn' : '🔴 Dừng nhận';
+  document.getElementById('statusText').className   = on ? 'status-online' : 'status-offline';
+}
+
+function switchDriverTab(tab, el) {
+  document.querySelectorAll('.driver-tab-content').forEach(t => t.classList.add('hidden'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('driverTab-' + tab).classList.remove('hidden');
+  el.classList.add('active');
+}
+
+// ── RENDER (nhận orders từ listenOrders) ──────────────
+function render(orders) {
+  const newOrders = orders.filter(o => o.status === 'pending');
+  const mine      = orders.filter(o => o.status === 'delivering' && o.driver === driverName);
+  const done      = orders.filter(o => o.status === 'done'       && o.driver === driverName);
+
+  // Phát thông báo khi có đơn mới
+  if (_prevPending >= 0 && newOrders.length > _prevPending) {
+    beepNew();
+    notifyNewOrder(newOrders.length);
+    switchDriverTab('new', document.getElementById('tabNew'));
+  }
+  _prevPending = newOrders.length;
+
+  document.getElementById('newCount').textContent       = newOrders.length || '';
+  document.getElementById('mineCount').textContent      = mine.length      || '';
+  document.getElementById('completedCount').textContent = done.length;
+  const earnings = done.reduce((s,o) => s + o.total * 0.15, 0);
+  document.getElementById('todayEarnings').textContent  = formatPrice(Math.round(earnings));
+
+  // Bản đồ đơn mới
+  if (driverMap) {
+    orderMarkers.forEach(m => driverMap.removeLayer(m));
+    orderMarkers = [];
+    newOrders.forEach(o => {
+      const rest = RESTAURANTS.find(r => r.name === o.restaurantName);
+      if (!rest) return;
+      const icon = L.divIcon({ html:`<div style="font-size:1.4rem">📦</div>`, className:'', iconSize:[32,32] });
+      const m = L.marker([rest.lat, rest.lng], { icon }).addTo(driverMap);
+      m.bindPopup(`<b>#${o.id}</b><br>${o.customer}<br>📍 ${o.address}<br><b>${formatPrice(o.total)}</b>`);
+      orderMarkers.push(m);
+    });
+  }
+
+  // Tab đơn mới
+  document.getElementById('driverTab-new').innerHTML = newOrders.length === 0
+    ? '<div class="empty-state">Chưa có đơn mới – đang chờ khách đặt 🎉</div>'
+    : newOrders.map(o => `
+      <div class="order-card pending">
+        <div class="order-header">
+          <span class="order-id">#${o.id}</span>
+          <span class="badge badge-pending">⏳ Chờ nhận</span>
+          <span class="order-time">${o.time}</span>
+        </div>
+        <div class="order-customer">👤 <strong>${o.customer}</strong></div>
+        <div class="order-meta">📞 <a href="tel:${o.phone}" class="phone-link">${o.phone}</a></div>
+        <div class="order-address">📍 ${o.address}</div>
+        <div class="order-address">🏪 ${o.restaurantName}</div>
+        ${o.note ? `<div class="order-note">📝 ${o.note}</div>` : ''}
+        <div class="order-items">${o.items.map(i=>`${i.emoji} ${i.name} x${i.qty}`).join(', ')}</div>
+        <div class="order-footer">
+          <div>
+            <span class="order-total">${formatPrice(o.total)}</span>
+            <span class="pay-method">${payLabel[o.payMethod]||o.payMethod}</span>
+          </div>
+          <div>
+            <span class="earn-badge">+${formatPrice(Math.round(o.total*0.15))}</span>
+            <button class="btn-accept" onclick="acceptOrder('${o._key||o.id}')">Nhận đơn ✓</button>
+          </div>
+        </div>
+      </div>`).join('');
+
+  // Tab đang giao
+  document.getElementById('driverTab-mine').innerHTML = mine.length === 0
+    ? '<div class="empty-state">Bạn chưa nhận đơn nào</div>'
+    : mine.map(o => `
+      <div class="order-card delivering">
+        <div class="order-header">
+          <span class="order-id">#${o.id}</span>
+          <span class="badge badge-delivering">🚚 Đang giao</span>
+        </div>
+        <div class="order-customer">👤 <strong>${o.customer}</strong></div>
+        <div class="order-meta">📞 <a href="tel:${o.phone}" class="phone-link">${o.phone}</a></div>
+        <div class="order-address">📍 ${o.address}</div>
+        <div class="order-address">🏪 ${o.restaurantName}</div>
+        <div class="pay-remind ${o.payMethod==='cash'?'cash-remind':'prepaid-remind'}">
+          ${o.payMethod==='cash'
+            ? `💵 Thu tiền mặt: <strong>${formatPrice(o.total)}</strong>`
+            : `✅ Đã thanh toán qua ${payLabel[o.payMethod]}`}
+        </div>
+        <div class="order-footer">
+          <span class="order-total">${formatPrice(o.total)}</span>
+          <button class="btn-done" onclick="completeOrder('${o._key||o.id}', ${o.total})">Giao xong ✓</button>
+        </div>
+      </div>`).join('');
+
+  // Tab đã xong
+  document.getElementById('driverTab-done').innerHTML = done.length === 0
+    ? '<div class="empty-state">Chưa có đơn hoàn thành hôm nay</div>'
+    : done.map(o => `
+      <div class="order-card done">
+        <div class="order-header">
+          <span class="order-id">#${o.id}</span>
+          <span class="badge badge-done">✅ Xong</span>
+          <span class="order-time">${o.time}</span>
+        </div>
+        <div class="order-customer">👤 ${o.customer} – ${o.address}</div>
+        <div class="order-footer">
+          <span class="order-total">${formatPrice(o.total)}</span>
+          <span class="earn-badge">+${formatPrice(Math.round(o.total*0.15))}</span>
+        </div>
+      </div>`).join('');
+}
+
+function acceptOrder(key) {
+  updateOrder(key, { status:'delivering', driver:driverName });
+  switchDriverTab('mine', document.getElementById('tabMine'));
+}
+
+function completeOrder(key, total) {
+  updateOrder(key, { status:'done' });
+  alert(`🎉 Giao xong! Bạn nhận được ${formatPrice(Math.round(total*0.15))}`);
+}
+
+// ── INIT ──────────────────────────────────────────────
+initFirebase();
+listenOrders(render);
+</script>
+</body>
+</html>

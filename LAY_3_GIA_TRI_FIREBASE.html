@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>Lấy 3 giá trị Firebase</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: Arial, sans-serif; background: #1a1a2e; color: #eee; padding: 20px; }
+h1 { color: #f5a623; text-align: center; margin-bottom: 30px; font-size: 22px; }
+.step { background: #16213e; border-radius: 12px; padding: 20px; margin-bottom: 20px; border-left: 4px solid #f5a623; }
+.step h2 { color: #f5a623; font-size: 16px; margin-bottom: 10px; }
+.step p { color: #ccc; font-size: 14px; line-height: 1.6; margin-bottom: 10px; }
+.btn { display: inline-block; background: #f5a623; color: #000; font-weight: bold; padding: 12px 24px; border-radius: 8px; border: none; cursor: pointer; font-size: 15px; text-decoration: none; margin: 5px 0; }
+.btn:hover { background: #ff8c00; }
+.btn-green { background: #27ae60; color: #fff; }
+.btn-green:hover { background: #229954; }
+label { display: block; color: #aaa; font-size: 13px; margin-bottom: 4px; margin-top: 12px; }
+input { width: 100%; padding: 10px 14px; background: #0f3460; border: 2px solid #333; border-radius: 8px; color: #fff; font-size: 14px; font-family: monospace; }
+input:focus { border-color: #f5a623; outline: none; }
+input.ok { border-color: #27ae60; background: #0a2e1a; }
+.hint { color: #888; font-size: 12px; margin-top: 4px; font-style: italic; }
+.done-box { display: none; background: #0d4f2f; border: 2px solid #27ae60; border-radius: 12px; padding: 20px; text-align: center; margin-top: 20px; }
+.done-box h2 { color: #2ecc71; font-size: 20px; }
+.img-guide { background: #0f3460; border-radius: 8px; padding: 12px; margin: 10px 0; font-family: monospace; font-size: 13px; color: #90cdf4; line-height: 2; }
+</style>
+</head>
+<body>
+
+<h1>🔥 Lấy 3 giá trị còn thiếu từ Firebase</h1>
+
+<!-- BƯỚC 1 -->
+<div class="step">
+  <h2>Bước 1 — Mở Firebase Console</h2>
+  <p>Click nút bên dưới để mở đúng trang cần lấy config:</p>
+  <button class="btn" onclick="openConsole()">🌐 Mở Firebase Console</button>
+  <div class="img-guide">
+    console.firebase.google.com<br>
+    → Project: <b>giaohangdn</b><br>
+    → ⚙️ Project Settings (bánh răng góc trái)<br>
+    → Tab "Your apps" → Web app (biểu tượng &lt;/&gt;)<br>
+    → Kéo xuống phần <b>SDK setup and configuration</b><br>
+    → Chọn "Config" (radio button)
+  </div>
+</div>
+
+<!-- BƯỚC 2 -->
+<div class="step">
+  <h2>Bước 2 — Dán 3 giá trị vào đây</h2>
+  <p>Copy từng giá trị trong khung config Firebase rồi dán vào ô bên dưới:</p>
+
+  <label>apiKey</label>
+  <input id="apiKey" type="text" placeholder='AIzaSy...' oninput="checkField(this)">
+  <p class="hint">Bắt đầu bằng "AIzaSy", dài ~39 ký tự</p>
+
+  <label>messagingSenderId</label>
+  <input id="senderId" type="text" placeholder='123456789012' oninput="checkField(this)">
+  <p class="hint">Dãy số, ~12 chữ số</p>
+
+  <label>appId</label>
+  <input id="appId" type="text" placeholder='1:123456789012:web:abc...' oninput="checkField(this)">
+  <p class="hint">Bắt đầu bằng "1:", có dấu ":"</p>
+</div>
+
+<!-- BƯỚC 3 -->
+<div class="step">
+  <h2>Bước 3 — Lưu vào app</h2>
+  <p>Sau khi điền đủ 3 giá trị, click nút bên dưới để ghi vào app.js:</p>
+  <button class="btn btn-green" onclick="saveConfig()">💾 Lưu vào app.js</button>
+</div>
+
+<div class="done-box" id="doneBox">
+  <h2>✅ Đã lưu! Firebase đã kết nối!</h2>
+  <p style="margin-top:10px; color:#aaa;">Đóng cửa sổ này, mở lại GiaoHangDN là xong.</p>
+</div>
+
+<script>
+function openConsole() {
+  try {
+    require('electron').ipcRenderer.send('open-url', 'https://console.firebase.google.com/project/giaohangdn/settings/general');
+  } catch(e) {
+    window.open('https://console.firebase.google.com/project/giaohangdn/settings/general');
+  }
+}
+
+function checkField(el) {
+  el.classList.toggle('ok', el.value.trim().length > 5);
+}
+
+function saveConfig() {
+  const apiKey  = document.getElementById('apiKey').value.trim();
+  const sender  = document.getElementById('senderId').value.trim();
+  const appId   = document.getElementById('appId').value.trim();
+
+  if (!apiKey || !sender || !appId) {
+    alert('Vui lòng điền đủ cả 3 giá trị!');
+    return;
+  }
+  if (!apiKey.startsWith('AIzaSy')) {
+    alert('apiKey phải bắt đầu bằng "AIzaSy" — kiểm tra lại!');
+    return;
+  }
+
+  try {
+    const fs   = require('fs');
+    const path = require('path');
+    const file = path.join(__dirname, 'app.js');
+    let src    = fs.readFileSync(file, 'utf8');
+
+    src = src.replace(/"PASTE_apiKey"[^,]*,/, `"${apiKey}",`);
+    src = src.replace(/"PASTE_messagingSenderId"[^,]*,/, `"${sender}",`);
+    src = src.replace(/"PASTE_appId"[^,]*,/, `"${appId}",`);
+
+    fs.writeFileSync(file, src, 'utf8');
+    document.getElementById('doneBox').style.display = 'block';
+  } catch(e) {
+    alert('Lỗi ghi file: ' + e.message);
+  }
+}
+</script>
+</body>
+</html>
