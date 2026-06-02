@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>Test GiaoHangDN</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: Arial, sans-serif; background: #0f172a; color: #e2e8f0; padding: 24px; }
+h1 { color: #f5a623; margin-bottom: 20px; }
+.test { background: #1e293b; border-radius: 10px; padding: 16px; margin-bottom: 12px; border-left: 4px solid #334155; }
+.test.pass { border-color: #22c55e; }
+.test.fail { border-color: #ef4444; }
+.test.run  { border-color: #f59e0b; }
+.test-name { font-weight: bold; margin-bottom: 6px; }
+.test-msg  { color: #94a3b8; font-size: 13px; }
+.pass .test-name::before { content: '✅ '; }
+.fail .test-name::before { content: '❌ '; }
+.run  .test-name::before { content: '⏳ '; }
+#summary { margin-top: 20px; padding: 16px; border-radius: 10px; text-align: center; font-size: 1.1rem; font-weight: bold; }
+.sum-pass { background: #14532d; color: #4ade80; }
+.sum-fail { background: #450a0a; color: #f87171; }
+button { background: #f5a623; color: #000; border: none; padding: 12px 28px; border-radius: 8px; font-weight: bold; font-size: 15px; cursor: pointer; margin-bottom: 20px; }
+button:hover { background: #e59312; }
+</style>
+</head>
+<body>
+<h1>🧪 Test tự động GiaoHangDN</h1>
+<button onclick="runAll()">▶ Chạy tất cả test</button>
+<div id="tests"></div>
+<div id="summary"></div>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="app.js"></script>
+<script>
+const results = [];
+
+function assert(name, condition, msg = '') {
+  results.push({ name, pass: !!condition, msg });
+  const div = document.createElement('div');
+  div.className = 'test ' + (condition ? 'pass' : 'fail');
+  div.innerHTML = `<div class="test-name">${name}</div><div class="test-msg">${msg || (condition ? 'OK' : 'THẤT BẠI')}</div>`;
+  document.getElementById('tests').appendChild(div);
+}
+
+async function runAll() {
+  document.getElementById('tests').innerHTML = '';
+  document.getElementById('summary').innerHTML = '';
+  results.length = 0;
+
+  // --- 1. Kiểm tra dữ liệu cơ bản ---
+  assert('RESTAURANTS tồn tại', typeof RESTAURANTS !== 'undefined' && Array.isArray(RESTAURANTS),
+    `Có ${RESTAURANTS?.length || 0} quán`);
+
+  assert('Có ít nhất 10 quán', RESTAURANTS.length >= 10,
+    `Tìm thấy ${RESTAURANTS.length} quán`);
+
+  assert('Tất cả quán có items', RESTAURANTS.every(r => r.items && r.items.length > 0),
+    'Mỗi quán có ít nhất 1 món');
+
+  assert('Tất cả quán có tọa độ', RESTAURANTS.every(r => r.lat && r.lng),
+    'Cần cho bản đồ Leaflet');
+
+  assert('formatPrice hoạt động', formatPrice(55000) === '55.000đ',
+    `formatPrice(55000) = "${formatPrice(55000)}"`);
+
+  assert('genOrderId tạo mã GH', genOrderId().startsWith('GH'),
+    `Ví dụ: ${genOrderId()}`);
+
+  // --- 2. Kiểm tra localStorage ---
+  const testKey = '__test_ghn__';
+  localStorage.setItem(testKey, 'ok');
+  assert('localStorage hoạt động', localStorage.getItem(testKey) === 'ok', 'Đọc/ghi localStorage OK');
+  localStorage.removeItem(testKey);
+
+  // --- 3. Tạo đơn hàng thử ---
+  const rest = RESTAURANTS[0];
+  const item = rest.items[0];
+  const order = {
+    id: genOrderId(),
+    customer: 'Khách Test',
+    phone: '0901234567',
+    address: '123 Test Street, Đà Nẵng',
+    note: 'Test tự động',
+    items: [{ ...item, qty: 2, restId: rest.id }],
+    restaurantName: rest.name,
+    total: item.price * 2 + 15000,
+    payMethod: 'cash',
+    status: 'pending',
+    time: new Date().toLocaleString('vi-VN'),
+    driver: null,
+  };
+
+  assert('Tạo đơn hàng test', order.id && order.total > 0,
+    `Đơn #${order.id} – ${rest.name} – Tổng: ${formatPrice(order.total)}`);
+
+  // --- 4. Lưu đơn vào localStorage ---
+  pushOrder(order);
+  const saved = loadOrders();
+  assert('Lưu đơn vào localStorage', saved.some(o => o.id === order.id),
+    `Đã lưu ${saved.length} đơn trong localStorage`);
+
+  // --- 5. Cập nhật trạng thái ---
+  updateOrder(order.id, { status: 'delivering', driver: 'Tài xế Test' });
+  const updated = loadOrders().find(o => o.id === order.id);
+  assert('Cập nhật trạng thái → delivering', updated?.status === 'delivering',
+    `Status: ${updated?.status}, Driver: ${updated?.driver}`);
+
+  // --- 6. Hoàn thành đơn ---
+  updateOrder(order.id, { status: 'done' });
+  const done = loadOrders().find(o => o.id === order.id);
+  assert('Hoàn thành đơn → done', done?.status === 'done', `Status: ${done?.status}`);
+
+  // --- 7. Tính doanh thu ---
+  const allOrders = loadOrders();
+  const revenue = allOrders.filter(o => o.status === 'done').reduce((s, o) => s + o.total, 0);
+  assert('Tính doanh thu', revenue >= order.total,
+    `Doanh thu: ${formatPrice(revenue)}`);
+
+  // --- 8. Xóa đơn test ---
+  removeOrder(order.id);
+  const afterDelete = loadOrders().find(o => o.id === order.id);
+  assert('Xóa đơn hoạt động', !afterDelete, 'Đơn test đã được xóa sạch');
+
+  // --- 9. Firebase config ---
+  const fbReady = FIREBASE_CONFIG.apiKey !== 'PASTE_apiKey';
+  assert('Firebase config', fbReady,
+    fbReady ? 'Firebase đã cấu hình ✓' : '⚠️ Chưa điền apiKey – dùng localStorage thay thế (vẫn OK)');
+
+  // --- 10. Telegram config ---
+  const tgReady = TG_CONFIG.token !== '' && TG_CONFIG.chatId !== '';
+  assert('Telegram config', tgReady,
+    tgReady ? 'Telegram đã cấu hình ✓' : '⚠️ Chưa cài Telegram – cài trong Admin → ⚙️');
+
+  // --- Tổng kết ---
+  const passed = results.filter(r => r.pass).length;
+  const total  = results.length;
+  const allPass = passed === total;
+  const summary = document.getElementById('summary');
+  summary.className = allPass ? 'sum-pass' : 'sum-fail';
+  summary.textContent = allPass
+    ? `🎉 TẤT CẢ ${total}/${total} TEST PASS — App chạy tốt, sẵn sàng kiếm tiền!`
+    : `${passed}/${total} test pass — Xem các test đỏ để fix`;
+}
+</script>
+</body>
+</html>
