@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cài đặt chạy thật – GiaoHangDN</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: Arial, sans-serif; background: #0f172a; color: #e2e8f0; padding: 20px; max-width: 600px; margin: 0 auto; }
+h1 { color: #f5a623; text-align: center; margin: 20px 0; font-size: 22px; }
+.step { background: #1e293b; border-radius: 14px; padding: 20px; margin-bottom: 16px; border: 2px solid #334155; }
+.step.done { border-color: #22c55e; }
+.step.active { border-color: #f5a623; }
+h2 { font-size: 16px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+.badge { background: #334155; color: #94a3b8; font-size: 12px; padding: 2px 8px; border-radius: 20px; }
+.badge.green { background: #14532d; color: #4ade80; }
+label { display: block; color: #94a3b8; font-size: 13px; margin: 10px 0 4px; }
+input { width: 100%; padding: 10px 14px; background: #0f172a; border: 2px solid #334155; border-radius: 8px; color: #fff; font-size: 14px; }
+input:focus { border-color: #f5a623; outline: none; }
+input.valid { border-color: #22c55e; }
+.row { display: flex; gap: 8px; margin-top: 12px; }
+.btn { flex: 1; padding: 11px; border: none; border-radius: 9px; font-weight: 700; font-size: 14px; cursor: pointer; }
+.btn-save  { background: #22c55e; color: #fff; }
+.btn-test  { background: #3b82f6; color: #fff; }
+.btn-open  { background: #f5a623; color: #000; }
+.btn:hover { opacity: .85; }
+.hint { color: #64748b; font-size: 12px; margin-top: 6px; line-height: 1.6; }
+.hint b { color: #90cdf4; }
+.status-bar { background: #0f172a; border: 1px solid #334155; border-radius: 10px; padding: 14px; margin-top: 14px; }
+.status-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid #1e293b; font-size: 14px; }
+.status-row:last-child { border: none; }
+.dot { width: 10px; height: 10px; border-radius: 50%; background: #ef4444; display: inline-block; margin-right: 6px; }
+.dot.on { background: #22c55e; }
+.final { background: #14532d; border: 2px solid #22c55e; border-radius: 14px; padding: 20px; text-align: center; margin-top: 16px; display: none; }
+.final h2 { color: #4ade80; justify-content: center; font-size: 20px; }
+.final p { color: #86efac; margin-top: 8px; }
+.url-box { background: #0f172a; border-radius: 8px; padding: 10px 14px; margin: 10px 0; font-family: monospace; font-size: 13px; color: #f5a623; word-break: break-all; }
+</style>
+</head>
+<body>
+
+<h1>🚀 Cài đặt chạy thật</h1>
+
+<!-- Trạng thái tổng quan -->
+<div class="status-bar" id="statusBar">
+  <div class="status-row"><span><span class="dot" id="d1"></span>Telegram bot</span><span id="s1" style="color:#ef4444;font-size:13px">Chưa cài</span></div>
+  <div class="status-row"><span><span class="dot" id="d2"></span>Thông tin thanh toán</span><span id="s2" style="color:#ef4444;font-size:13px">Chưa điền</span></div>
+  <div class="status-row"><span><span class="dot" id="d3"></span>Firebase (đa thiết bị)</span><span id="s3" style="color:#f59e0b;font-size:13px">Tuỳ chọn</span></div>
+</div>
+
+<!-- BƯỚC 1: Telegram -->
+<div class="step active" id="step1">
+  <h2>📱 Bước 1 — Telegram nhận đơn <span class="badge" id="b1">Bắt buộc</span></h2>
+  <p style="color:#94a3b8;font-size:13px;margin-bottom:12px">Khi có đơn mới, tin nhắn sẽ gửi thẳng vào điện thoại mày.</p>
+
+  <label>Bot Token (lấy từ @BotFather)</label>
+  <input id="tgToken" type="text" placeholder="123456789:AAFxxxxxxxx" oninput="checkInputs()">
+
+  <label>Chat ID của mày</label>
+  <input id="tgChatId" type="text" placeholder="-100xxxxxxxxx hoặc số ID" oninput="checkInputs()">
+
+  <div class="hint">
+    Chưa có bot? Làm theo 3 bước:<br>
+    1. Mở Telegram → tìm <b>@BotFather</b> → gửi <b>/newbot</b><br>
+    2. Đặt tên → BotFather gửi lại <b>Token</b> (dạng 123...:AAF...) → copy vào ô trên<br>
+    3. Tìm <b>@userinfobot</b> → gửi bất kỳ tin → nó trả về <b>Id</b> → copy vào Chat ID
+  </div>
+
+  <div class="row">
+    <button class="btn btn-test" onclick="testTelegram()">🧪 Test gửi tin</button>
+    <button class="btn btn-save" onclick="saveTelegram()">💾 Lưu</button>
+  </div>
+</div>
+
+<!-- BƯỚC 2: Thanh toán -->
+<div class="step" id="step2">
+  <h2>💰 Bước 2 — Thông tin nhận tiền <span class="badge" id="b2">Bắt buộc</span></h2>
+
+  <label>Số MoMo của mày</label>
+  <input id="momoPhone" type="tel" placeholder="0901234567" oninput="checkInputs()">
+
+  <label>Tên tài khoản MoMo</label>
+  <input id="momoName" type="text" placeholder="NGUYEN VAN A" oninput="checkInputs()">
+
+  <label>Số tài khoản ngân hàng</label>
+  <input id="bankAcc" type="text" placeholder="1234567890" oninput="checkInputs()">
+
+  <label>Tên ngân hàng</label>
+  <input id="bankName" type="text" placeholder="Vietcombank / MB Bank / Techcombank..." oninput="checkInputs()">
+
+  <label>Tên chủ tài khoản</label>
+  <input id="bankOwner" type="text" placeholder="NGUYEN VAN A" oninput="checkInputs()">
+
+  <button class="btn btn-save" style="margin-top:12px;width:100%" onclick="savePayment()">💾 Lưu thông tin thanh toán</button>
+</div>
+
+<!-- BƯỚC 3: Firebase (tuỳ chọn) -->
+<div class="step" id="step3">
+  <h2>🔥 Bước 3 — Firebase <span class="badge">Tuỳ chọn</span></h2>
+  <p style="color:#94a3b8;font-size:13px;margin-bottom:10px">Không có Firebase vẫn chạy được. Cần Firebase khi dùng nhiều thiết bị cùng lúc (admin + tài xế cùng xem đơn real-time).</p>
+
+  <label>apiKey</label>
+  <input id="fbApiKey" type="text" placeholder="AIzaSy..." oninput="checkInputs()">
+  <label>messagingSenderId</label>
+  <input id="fbSender" type="text" placeholder="123456789012" oninput="checkInputs()">
+  <label>appId</label>
+  <input id="fbAppId" type="text" placeholder="1:123456789012:web:abc..." oninput="checkInputs()">
+
+  <div class="hint">Lấy tại: <b>console.firebase.google.com</b> → project giaohangdn → ⚙️ Project Settings → Your apps → Config</div>
+
+  <button class="btn btn-save" style="margin-top:12px;width:100%" onclick="saveFirebase()">💾 Lưu Firebase</button>
+</div>
+
+<!-- KẾT QUẢ -->
+<div class="final" id="finalBox">
+  <h2>🎉 Sẵn sàng chạy thật!</h2>
+  <p>Chia sẻ link này cho khách đặt hàng:</p>
+  <div class="url-box" id="siteUrl"></div>
+  <button class="btn btn-open" style="width:100%;margin-top:8px" onclick="openApp()">🛵 Mở app ngay</button>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="app.js"></script>
+<script>
+// Load saved values
+window.onload = function() {
+  try {
+    const tg = JSON.parse(localStorage.getItem('ghn_tg_config') || '{}');
+    if (tg.token)  document.getElementById('tgToken').value  = tg.token;
+    if (tg.chatId) document.getElementById('tgChatId').value = tg.chatId;
+
+    const pay = JSON.parse(localStorage.getItem('ghn_pay_config') || '{}');
+    if (pay.momoPhone)  document.getElementById('momoPhone').value  = pay.momoPhone;
+    if (pay.momoName)   document.getElementById('momoName').value   = pay.momoName;
+    if (pay.bankAcc)    document.getElementById('bankAcc').value    = pay.bankAcc;
+    if (pay.bankName)   document.getElementById('bankName').value   = pay.bankName;
+    if (pay.bankOwner)  document.getElementById('bankOwner').value  = pay.bankOwner;
+
+    const fb = JSON.parse(localStorage.getItem('ghn_fb_config') || '{}');
+    if (fb.apiKey)  document.getElementById('fbApiKey').value = fb.apiKey;
+    if (fb.sender)  document.getElementById('fbSender').value = fb.sender;
+    if (fb.appId)   document.getElementById('fbAppId').value  = fb.appId;
+  } catch(e) {}
+  checkInputs();
+};
+
+function checkInputs() {
+  const tgOK  = document.getElementById('tgToken').value.length > 10 && document.getElementById('tgChatId').value.length > 3;
+  const payOK = document.getElementById('momoPhone').value.length >= 10 || document.getElementById('bankAcc').value.length >= 6;
+  const fbOK  = document.getElementById('fbApiKey').value.startsWith('AIzaSy');
+
+  setStatus(1, tgOK);
+  setStatus(2, payOK);
+  if (fbOK) { document.getElementById('d3').className='dot on'; document.getElementById('s3').textContent='Đã cài'; document.getElementById('s3').style.color='#4ade80'; }
+
+  if (tgOK && payOK) {
+    document.getElementById('finalBox').style.display = 'block';
+    document.getElementById('siteUrl').textContent = window.location.origin + '/index.html';
+  }
+}
+
+function setStatus(n, ok) {
+  document.getElementById('d'+n).className = 'dot' + (ok ? ' on' : '');
+  document.getElementById('s'+n).textContent = ok ? 'Đã cài ✓' : 'Chưa xong';
+  document.getElementById('s'+n).style.color = ok ? '#4ade80' : '#ef4444';
+  document.getElementById('b'+n).className   = 'badge' + (ok ? ' green' : '');
+  document.getElementById('b'+n).textContent = ok ? '✓ Xong' : 'Bắt buộc';
+}
+
+function testTelegram() {
+  const token  = document.getElementById('tgToken').value.trim();
+  const chatId = document.getElementById('tgChatId').value.trim();
+  if (!token || !chatId) { alert('Điền Token và Chat ID trước!'); return; }
+  fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ chat_id: chatId, text: '✅ GiaoHangDN kết nối thành công!\n🛵 Bot sẵn sàng nhận đơn hàng.' })
+  }).then(r=>r.json()).then(d => {
+    if (d.ok) alert('✅ Gửi thành công! Kiểm tra Telegram.');
+    else alert('❌ Lỗi: ' + d.description);
+  }).catch(e => alert('❌ ' + e.message));
+}
+
+function saveTelegram() {
+  const token  = document.getElementById('tgToken').value.trim();
+  const chatId = document.getElementById('tgChatId').value.trim();
+  if (!token || !chatId) { alert('Điền đủ Token và Chat ID!'); return; }
+  localStorage.setItem('ghn_tg_config', JSON.stringify({ token, chatId }));
+  TG_CONFIG.token = token; TG_CONFIG.chatId = chatId;
+  checkInputs();
+  alert('✅ Đã lưu Telegram!');
+}
+
+function savePayment() {
+  const data = {
+    momoPhone: document.getElementById('momoPhone').value.trim(),
+    momoName:  document.getElementById('momoName').value.trim(),
+    bankAcc:   document.getElementById('bankAcc').value.trim(),
+    bankName:  document.getElementById('bankName').value.trim(),
+    bankOwner: document.getElementById('bankOwner').value.trim(),
+  };
+  if (!data.momoPhone && !data.bankAcc) { alert('Điền ít nhất MoMo hoặc tài khoản ngân hàng!'); return; }
+  localStorage.setItem('ghn_pay_config', JSON.stringify(data));
+  // Cập nhật BANK_INFO và MOMO_INFO trong bộ nhớ
+  if (data.momoPhone) { MOMO_INFO.phone = data.momoPhone; MOMO_INFO.name = data.momoName; }
+  if (data.bankAcc)   { BANK_INFO.account = data.bankAcc; BANK_INFO.bank = data.bankName; BANK_INFO.name = data.bankOwner; }
+  checkInputs();
+  alert('✅ Đã lưu thông tin thanh toán!');
+}
+
+function saveFirebase() {
+  const apiKey = document.getElementById('fbApiKey').value.trim();
+  const sender = document.getElementById('fbSender').value.trim();
+  const appId  = document.getElementById('fbAppId').value.trim();
+  if (!apiKey.startsWith('AIzaSy')) { alert('apiKey phải bắt đầu bằng "AIzaSy"!'); return; }
+  try {
+    const fs   = require('fs');
+    const path = require('path');
+    const file = path.join(__dirname, 'app.js');
+    let src = fs.readFileSync(file, 'utf8');
+    src = src.replace(/"PASTE_apiKey"[^,]*,/, `"${apiKey}",`);
+    src = src.replace(/"PASTE_messagingSenderId"[^,]*,/, `"${sender}",`);
+    src = src.replace(/"PASTE_appId"[^,]*,/, `"${appId}",`);
+    fs.writeFileSync(file, src, 'utf8');
+    localStorage.setItem('ghn_fb_config', JSON.stringify({ apiKey, sender, appId }));
+    checkInputs();
+    alert('✅ Đã lưu Firebase vào app.js!');
+  } catch(e) {
+    localStorage.setItem('ghn_fb_config', JSON.stringify({ apiKey, sender, appId }));
+    checkInputs();
+    alert('✅ Đã lưu (mở Electron app để ghi vào file)');
+  }
+}
+
+function openApp() {
+  window.location.href = 'index.html';
+}
+</script>
+</body>
+</html>

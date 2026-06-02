@@ -141,5 +141,18 @@ function sendTelegramAlert(order) {
   }).catch(() => {});
 }
 
+// Load payment & Telegram config from localStorage on startup
+(function() {
+  try {
+    const tg = JSON.parse(localStorage.getItem('ghn_tg_config') || '{}');
+    if (tg.token)  TG_CONFIG.token  = tg.token;
+    if (tg.chatId) TG_CONFIG.chatId = tg.chatId;
+
+    const pay = JSON.parse(localStorage.getItem('ghn_pay_config') || '{}');
+    if (pay.momoPhone) { MOMO_INFO.phone = pay.momoPhone; MOMO_INFO.name = pay.momoName || MOMO_INFO.name; }
+    if (pay.bankAcc)   { BANK_INFO.account = pay.bankAcc; BANK_INFO.bank = pay.bankName || BANK_INFO.bank; BANK_INFO.name = pay.bankOwner || BANK_INFO.name; }
+  } catch(e) {}
+})();
+
 function formatPrice(p) { return p.toLocaleString('vi-VN') + 'đ'; }
 function genOrderId()   { return 'GH' + Date.now().toString().slice(-6); }

@@ -1,0 +1,3 @@
+@echo off
+echo Dang mo GiaoHangDN...
+start "" "https://thaoquynh2026-ops.github.io/GiaoHangDN/SETUP_CHAY_THAT.html"
