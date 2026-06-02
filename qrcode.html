@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>In QR Code – GiaoHangDN</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#0f172a;color:#e2e8f0;min-height:100vh}
+.hdr{background:#1e293b;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #334155}
+.hdr-logo{color:#f5a623;font-weight:800}
+.hdr a{color:#94a3b8;font-size:.83rem;text-decoration:none}
+.container{max-width:640px;margin:0 auto;padding:24px 20px}
+.section{background:#1e293b;border-radius:14px;padding:20px;margin-bottom:16px}
+h2{font-size:.95rem;font-weight:700;color:#94a3b8;margin-bottom:14px;text-transform:uppercase;letter-spacing:.05em}
+label{display:block;color:#94a3b8;font-size:.8rem;margin-bottom:4px;margin-top:10px}
+input,select{width:100%;padding:10px 14px;background:#0f172a;border:1.5px solid #334155;border-radius:8px;color:#e2e8f0;font-size:.9rem;font-family:inherit;outline:none}
+input:focus,select:focus{border-color:#f5a623}
+.btn{width:100%;padding:13px;border:none;border-radius:10px;font-size:.95rem;font-weight:700;cursor:pointer;margin-top:12px;font-family:inherit;transition:.15s}
+.btn-or{background:#f5a623;color:#000}
+.btn-or:hover{background:#e59312}
+.btn-blue{background:#3b82f6;color:#fff}
+
+/* QR Preview */
+.qr-preview{display:none;background:#fff;border-radius:16px;padding:28px;text-align:center;margin-top:16px}
+.qr-preview.show{display:block}
+.qr-preview img{width:220px;height:220px;border:2px solid #e2e8f0;border-radius:10px;display:block;margin:0 auto}
+.qr-title{font-size:1.3rem;font-weight:800;color:#1e293b;margin-top:14px}
+.qr-sub{color:#64748b;font-size:.85rem;margin-top:4px}
+.qr-url{font-family:monospace;font-size:.72rem;color:#94a3b8;margin-top:8px;word-break:break-all}
+
+/* Print styles */
+@media print {
+  body{background:#fff!important;color:#000}
+  .hdr,.container>.section,.no-print{display:none!important}
+  .qr-preview{display:block!important;margin:0;border-radius:0;box-shadow:none;padding:20px}
+  .print-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:20px}
+}
+.print-grid{display:none}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div class="hdr-logo">🖨️ In QR Code</div>
+  <a href="admin.html">← Quản lý</a>
+</div>
+
+<div class="container">
+  <div class="section">
+    <h2>⚙️ Tạo QR Code</h2>
+
+    <label>Loại QR</label>
+    <select id="qrType" onchange="onTypeChange()">
+      <option value="order">🛵 QR đặt hàng giao tận nơi</option>
+      <option value="restaurant">🏪 QR cho quán cụ thể</option>
+      <option value="custom">🔗 URL tuỳ chỉnh</option>
+    </select>
+
+    <div id="restaurantSelect" style="display:none">
+      <label>Chọn quán</label>
+      <select id="restId" onchange="updatePreview()"></select>
+    </div>
+
+    <div id="customUrl" style="display:none">
+      <label>URL</label>
+      <input id="customLink" type="url" placeholder="https://..." oninput="updatePreview()">
+    </div>
+
+    <label>Tên hiển thị dưới QR</label>
+    <input id="qrLabel" type="text" placeholder="Quét để đặt hàng" oninput="updatePreview()" value="🛵 Quét để đặt hàng">
+
+    <label>Kích thước QR (px)</label>
+    <select id="qrSize" onchange="updatePreview()">
+      <option value="200">Nhỏ – 200px (in danh thiếp)</option>
+      <option value="300" selected>Vừa – 300px (in A5)</option>
+      <option value="400">Lớn – 400px (in A4)</option>
+    </select>
+
+    <button class="btn btn-or" onclick="updatePreview()">👁️ Xem trước</button>
+  </div>
+
+  <!-- Preview -->
+  <div class="qr-preview" id="qrPreview">
+    <img id="qrImg" src="" alt="QR Code">
+    <div class="qr-title" id="qrTitleText">GiaoHangDN</div>
+    <div class="qr-sub" id="qrLabelText">🛵 Quét để đặt hàng</div>
+    <div class="qr-url" id="qrUrlText"></div>
+    <div style="margin-top:16px;display:flex;gap:8px">
+      <button class="btn btn-blue no-print" onclick="window.print()" style="flex:1">🖨️ In ngay</button>
+      <button class="btn btn-or no-print" onclick="downloadQR()" style="flex:1">⬇️ Tải PNG</button>
+    </div>
+  </div>
+
+  <!-- Grid 4 QR để in -->
+  <div class="section no-print" style="margin-top:16px">
+    <h2>🖨️ In nhanh 4 QR một lúc</h2>
+    <p style="color:#64748b;font-size:.83rem;margin-bottom:12px">In 4 QR cùng kích thước trên 1 tờ A4, cắt ra đặt mỗi bàn.</p>
+    <button class="btn btn-or" onclick="printGrid()">🖨️ In 4 QR / trang</button>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="app.js"></script>
+<script>
+const BASE_URL = location.origin + location.pathname.replace('qrcode.html','');
+
+// Điền danh sách quán
+const sel = document.getElementById('restId');
+RESTAURANTS.forEach(r => {
+  const opt = document.createElement('option');
+  opt.value = r.id;
+  opt.textContent = r.emoji + ' ' + r.name;
+  sel.appendChild(opt);
+});
+
+function onTypeChange() {
+  const t = document.getElementById('qrType').value;
+  document.getElementById('restaurantSelect').style.display = t==='restaurant' ? 'block' : 'none';
+  document.getElementById('customUrl').style.display = t==='custom' ? 'block' : 'none';
+  updatePreview();
+}
+
+function getTargetUrl() {
+  const t = document.getElementById('qrType').value;
+  if (t==='order')      return BASE_URL + 'index.html';
+  if (t==='restaurant') return BASE_URL + 'index.html#rest-' + document.getElementById('restId').value;
+  return document.getElementById('customLink').value || BASE_URL + 'index.html';
+}
+
+function updatePreview() {
+  const url   = getTargetUrl();
+  const size  = document.getElementById('qrSize').value;
+  const label = document.getElementById('qrLabel').value || 'Quét để đặt hàng';
+  const t     = document.getElementById('qrType').value;
+  let title   = 'GiaoHangDN';
+  if (t==='restaurant') {
+    const r = RESTAURANTS.find(r=>r.id===+document.getElementById('restId').value);
+    if(r) title = r.emoji + ' ' + r.name;
+  }
+
+  document.getElementById('qrImg').src = `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(url)}&margin=10&color=1e293b`;
+  document.getElementById('qrTitleText').textContent = title;
+  document.getElementById('qrLabelText').textContent = label;
+  document.getElementById('qrUrlText').textContent   = url;
+  document.getElementById('qrPreview').classList.add('show');
+}
+
+function downloadQR() {
+  const url  = getTargetUrl();
+  const size = 600;
+  const link = document.createElement('a');
+  link.href = `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(url)}&margin=10`;
+  link.download = 'QR_GiaoHangDN.png';
+  link.target = '_blank';
+  link.click();
+}
+
+function printGrid() {
+  updatePreview();
+  const url   = getTargetUrl();
+  const label = document.getElementById('qrLabel').value || 'Quét để đặt hàng';
+  const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=280x280&data=${encodeURIComponent(url)}&margin=10&color=1e293b`;
+  const w = window.open('','_blank');
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
+  <title>QR GiaoHangDN</title>
+  <style>
+    body{margin:0;padding:20px;font-family:Arial,sans-serif}
+    .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:24px;max-width:700px;margin:0 auto}
+    .card{border:2px dashed #ddd;border-radius:12px;padding:20px;text-align:center}
+    .card img{width:200px;height:200px}
+    .card .name{font-size:1.1rem;font-weight:800;margin-top:10px}
+    .card .lbl{font-size:.85rem;color:#666;margin-top:4px}
+    @media print{body{padding:10px}}
+  </style></head><body>
+  <div class="grid">
+    ${Array(4).fill(0).map(()=>`
+      <div class="card">
+        <img src="${qrSrc}" alt="QR">
+        <div class="name">🛵 GiaoHangDN</div>
+        <div class="lbl">${label}</div>
+      </div>`).join('')}
+  </div>
+  <script>window.onload=()=>window.print()<\/script>
+  </body></html>`);
+  w.document.close();
+}
+
+// Init default
+updatePreview();
+</script>
+</body>
+</html>

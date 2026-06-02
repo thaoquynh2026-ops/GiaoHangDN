@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Thống kê – GiaoHangDN</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<link rel="stylesheet" href="style.css">
+<style>
+.hidden{display:none!important}
+.stats-page{background:#0f172a;min-height:100vh;color:#e2e8f0;padding-bottom:40px}
+.stats-header{background:#1e293b;padding:16px 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #334155}
+.stats-header .logo{color:#f5a623;font-weight:800;font-size:1.1rem}
+.stats-header a{color:#94a3b8;font-size:.83rem;text-decoration:none}
+.kpi-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;padding:20px}
+.kpi{background:#1e293b;border-radius:14px;padding:16px}
+.kpi-val{font-size:1.6rem;font-weight:800;color:#f5a623}
+.kpi-lbl{font-size:.75rem;color:#64748b;margin-top:4px}
+.kpi.blue .kpi-val{color:#60a5fa}
+.kpi.green .kpi-val{color:#4ade80}
+.kpi.purple .kpi-val{color:#c084fc}
+.chart-card{background:#1e293b;border-radius:14px;margin:0 20px 16px;padding:16px}
+.chart-title{font-size:.88rem;font-weight:700;color:#94a3b8;margin-bottom:14px;text-transform:uppercase;letter-spacing:.05em}
+.pay-bars{display:flex;flex-direction:column;gap:10px}
+.pay-bar-row{display:flex;align-items:center;gap:10px;font-size:.83rem}
+.pay-bar-bg{flex:1;height:10px;background:#334155;border-radius:5px;overflow:hidden}
+.pay-bar-fill{height:100%;border-radius:5px;transition:width .8s ease}
+.rest-list{display:flex;flex-direction:column;gap:8px}
+.rest-row{display:flex;justify-content:space-between;align-items:center;padding:9px 12px;background:#0f172a;border-radius:10px;font-size:.85rem}
+.rest-orders{color:#64748b;font-size:.75rem}
+.period-btns{display:flex;gap:8px;padding:0 20px 4px}
+.pbtn{padding:6px 16px;border-radius:20px;border:1px solid #334155;background:transparent;color:#94a3b8;font-size:.78rem;cursor:pointer;font-family:inherit}
+.pbtn.on{background:#f5a623;color:#000;border-color:#f5a623;font-weight:700}
+</style>
+</head>
+<body class="stats-page">
+
+<div class="stats-header">
+  <div class="logo">📊 Thống kê</div>
+  <a href="admin.html">← Quản lý</a>
+</div>
+
+<div style="padding:16px 20px 8px">
+  <div class="period-btns">
+    <button class="pbtn on" onclick="setPeriod(7,this)">7 ngày</button>
+    <button class="pbtn" onclick="setPeriod(30,this)">30 ngày</button>
+    <button class="pbtn" onclick="setPeriod(0,this)">Tất cả</button>
+  </div>
+</div>
+
+<!-- KPIs -->
+<div class="kpi-grid">
+  <div class="kpi"><div class="kpi-val" id="kTotalOrders">0</div><div class="kpi-lbl">Tổng đơn hàng</div></div>
+  <div class="kpi green"><div class="kpi-val" id="kRevenue">0đ</div><div class="kpi-lbl">Doanh thu (đơn xong)</div></div>
+  <div class="kpi blue"><div class="kpi-val" id="kAvgOrder">0đ</div><div class="kpi-lbl">Giá trị đơn TB</div></div>
+  <div class="kpi purple"><div class="kpi-val" id="kTodayOrders">0</div><div class="kpi-lbl">Đơn hôm nay</div></div>
+</div>
+
+<!-- Biểu đồ đơn theo ngày -->
+<div class="chart-card">
+  <div class="chart-title">📈 Đơn hàng theo ngày</div>
+  <canvas id="chartOrders" height="180"></canvas>
+</div>
+
+<!-- Doanh thu theo thanh toán -->
+<div class="chart-card">
+  <div class="chart-title">💰 Doanh thu theo thanh toán</div>
+  <div class="pay-bars" id="payBars"></div>
+</div>
+
+<!-- Top quán -->
+<div class="chart-card">
+  <div class="chart-title">🏆 Top quán ăn nhiều đơn nhất</div>
+  <div class="rest-list" id="topRests"></div>
+</div>
+
+<!-- Giờ cao điểm -->
+<div class="chart-card">
+  <div class="chart-title">🕐 Đơn theo giờ trong ngày</div>
+  <canvas id="chartHours" height="160"></canvas>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="app.js"></script>
+<script>
+let chartOrders = null, chartHours = null;
+let currentDays = 7;
+
+const fmt = n => (+n||0).toLocaleString('vi-VN') + 'đ';
+
+function setPeriod(days, el) {
+  currentDays = days;
+  document.querySelectorAll('.pbtn').forEach(b => b.classList.remove('on'));
+  el.classList.add('on');
+  renderStats();
+}
+
+function filterByDays(orders, days) {
+  if (!days) return orders;
+  const cutoff = Date.now() - days * 86400000;
+  return orders.filter(o => {
+    try {
+      const parts = o.time.split(' ');
+      const [h, m] = parts[0].split(':').map(Number);
+      const [d, mo] = parts[1].split('/').map(Number);
+      const yr = new Date().getFullYear();
+      return new Date(yr, mo-1, d, h, m).getTime() > cutoff;
+    } catch(e) { return true; }
+  });
+}
+
+function parseHour(timeStr) {
+  try { return parseInt(timeStr.split(':')[0]); } catch(e) { return 12; }
+}
+
+function parseDate(timeStr) {
+  try {
+    const parts = timeStr.split(' ');
+    const [d, m] = parts[1].split('/').map(Number);
+    return `${d}/${m}`;
+  } catch(e) { return ''; }
+}
+
+function renderStats() {
+  const allOrders = loadOrders();
+  const orders = filterByDays(allOrders, currentDays);
+  const done = orders.filter(o => o.status === 'done');
+  const rev = done.reduce((s, o) => s + (o.total || 0), 0);
+  const today = new Date().toLocaleDateString('vi-VN', {day:'numeric',month:'numeric'}).replace(' thg ','/')
+                .split('/').reverse().slice(0,2).join('/');
+
+  document.getElementById('kTotalOrders').textContent = orders.length;
+  document.getElementById('kRevenue').textContent = fmt(rev);
+  document.getElementById('kAvgOrder').textContent = orders.length ? fmt(Math.round(rev / (done.length || 1))) : '0đ';
+
+  const todayOrders = allOrders.filter(o => {
+    try { const p = o.time.split(' '); return p[1] === today; } catch(e) { return false; }
+  });
+  document.getElementById('kTodayOrders').textContent = todayOrders.length;
+
+  // --- Chart: đơn theo ngày ---
+  const days = currentDays || 7;
+  const labels = [], data = [];
+  for (let i = (days > 0 ? days-1 : 6); i >= 0; i--) {
+    const d = new Date(Date.now() - i*86400000);
+    const lbl = `${d.getDate()}/${d.getMonth()+1}`;
+    labels.push(lbl);
+    data.push(orders.filter(o => parseDate(o.time) === lbl).length);
+  }
+  if (chartOrders) chartOrders.destroy();
+  chartOrders = new Chart(document.getElementById('chartOrders'), {
+    type: 'bar',
+    data: { labels, datasets: [{ data, backgroundColor: '#f5a623', borderRadius: 6, borderSkipped: false }] },
+    options: {
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { color: '#64748b', font: { size: 11 } }, grid: { color: '#1e293b' } },
+        y: { ticks: { color: '#64748b', stepSize: 1, font: { size: 11 } }, grid: { color: '#334155' } }
+      }
+    }
+  });
+
+  // --- Pay breakdown ---
+  const cash = done.filter(o=>o.payMethod==='cash').reduce((s,o)=>s+o.total,0);
+  const momo = done.filter(o=>o.payMethod==='momo').reduce((s,o)=>s+o.total,0);
+  const bank = done.filter(o=>o.payMethod==='bank').reduce((s,o)=>s+o.total,0);
+  const maxPay = Math.max(cash, momo, bank, 1);
+  document.getElementById('payBars').innerHTML = [
+    {label:'💵 Tiền mặt', val:cash, color:'#f5a623'},
+    {label:'💜 MoMo',     val:momo, color:'#a855f7'},
+    {label:'🏦 Chuyển khoản', val:bank, color:'#3b82f6'},
+  ].map(p=>`
+    <div class="pay-bar-row">
+      <span style="width:120px;color:#94a3b8">${p.label}</span>
+      <div class="pay-bar-bg"><div class="pay-bar-fill" style="width:${Math.round(p.val/maxPay*100)}%;background:${p.color}"></div></div>
+      <span style="color:#e2e8f0;min-width:80px;text-align:right">${fmt(p.val)}</span>
+    </div>`).join('');
+
+  // --- Top restaurants ---
+  const restCount = {};
+  orders.forEach(o => { restCount[o.restaurantName] = (restCount[o.restaurantName]||0)+1; });
+  const topRests = Object.entries(restCount).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  const maxRest = topRests[0]?.[1] || 1;
+  document.getElementById('topRests').innerHTML = topRests.length === 0
+    ? '<div style="color:#64748b;font-size:.83rem;text-align:center;padding:12px">Chưa có dữ liệu</div>'
+    : topRests.map(([name,count],i)=>`
+      <div class="rest-row">
+        <span>${['🥇','🥈','🥉','4.','5.'][i]} ${name||'Không rõ'}</span>
+        <span class="rest-orders">${count} đơn</span>
+      </div>`).join('');
+
+  // --- Chart: giờ cao điểm ---
+  const hourData = Array(24).fill(0);
+  orders.forEach(o => { const h = parseHour(o.time); if(h>=0&&h<24) hourData[h]++; });
+  const hourLabels = Array.from({length:24},(_,i)=>i+'h');
+  if (chartHours) chartHours.destroy();
+  chartHours = new Chart(document.getElementById('chartHours'), {
+    type: 'line',
+    data: { labels: hourLabels, datasets: [{ data: hourData, borderColor:'#60a5fa', backgroundColor:'rgba(96,165,250,.1)', fill:true, tension:.4, pointRadius:3, pointBackgroundColor:'#60a5fa' }] },
+    options: {
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { color:'#64748b', font:{size:10}, maxTicksLimit:12 }, grid: { color:'#1e293b' } },
+        y: { ticks: { color:'#64748b', stepSize:1, font:{size:10} }, grid: { color:'#334155' } }
+      }
+    }
+  });
+}
+
+initFirebase();
+listenOrders(orders => renderStats());
+</script>
+</body>
+</html>
