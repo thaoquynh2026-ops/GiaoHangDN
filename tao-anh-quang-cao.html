@@ -3,58 +3,166 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Tạo ảnh quảng cáo – GiaoHangDN</title>
+<title>Ảnh quảng cáo – GiaoHangDN</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:'Segoe UI',system-ui,sans-serif;background:#0f172a;color:#e2e8f0;padding:16px}
-h1{color:#f5a623;text-align:center;margin-bottom:6px;font-size:1.2rem}
-.sub{text-align:center;color:#64748b;font-size:.83rem;margin-bottom:20px}
-.tabs{display:flex;gap:8px;margin-bottom:16px;overflow-x:auto}
-.tab{padding:8px 16px;border-radius:20px;border:1px solid #334155;background:transparent;color:#94a3b8;font-size:.8rem;cursor:pointer;white-space:nowrap;font-family:inherit}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#0f172a;color:#e2e8f0;padding:16px;max-width:640px;margin:0 auto}
+h1{color:#f5a623;text-align:center;margin-bottom:6px}
+.sub{text-align:center;color:#64748b;font-size:.85rem;margin-bottom:20px}
+.tabs{display:flex;gap:8px;margin-bottom:16px;overflow-x:auto;padding-bottom:4px}
+.tab{padding:8px 14px;border-radius:20px;border:1.5px solid #334155;background:transparent;color:#94a3b8;font-size:.78rem;cursor:pointer;white-space:nowrap;font-family:inherit;transition:.15s}
 .tab.on{background:#f5a623;color:#000;font-weight:700;border-color:#f5a623}
-canvas{display:block;max-width:100%;border-radius:12px;box-shadow:0 4px 24px rgba(0,0,0,.4)}
-.canvas-wrap{background:#1e293b;border-radius:14px;padding:16px;margin-bottom:14px;text-align:center}
-.btn-row{display:flex;gap:8px;margin-top:12px;justify-content:center}
-.btn{padding:11px 22px;border:none;border-radius:10px;font-size:.88rem;font-weight:700;cursor:pointer;font-family:inherit}
+
+.preview{background:#1e293b;border-radius:16px;padding:16px;margin-bottom:14px;text-align:center}
+.img-wrap{border-radius:12px;overflow:hidden;display:inline-block;max-width:100%}
+.img-wrap img,.img-wrap svg{display:block;max-width:100%;height:auto}
+
+.btn-row{display:flex;gap:8px;margin-top:12px;justify-content:center;flex-wrap:wrap}
+.btn{padding:11px 20px;border:none;border-radius:10px;font-size:.88rem;font-weight:700;cursor:pointer;font-family:inherit;text-decoration:none;display:inline-block}
 .btn-dl{background:#22c55e;color:#fff}
-.btn-dl:hover{background:#16a34a}
-.btn-regen{background:#3b82f6;color:#fff}
+.btn-share{background:#1877f2;color:#fff}
+
 .caption-box{background:#1e293b;border-radius:12px;padding:14px;margin-bottom:14px}
-.caption-title{font-size:.75rem;font-weight:700;color:#f5a623;text-transform:uppercase;margin-bottom:8px}
-.caption-text{background:#0f172a;border-radius:8px;padding:12px;font-size:.82rem;line-height:1.8;color:#cbd5e1;white-space:pre-wrap;word-break:break-word}
-.btn-copy{background:#334155;color:#e2e8f0;padding:7px 16px;border-radius:8px;border:none;cursor:pointer;font-size:.78rem;margin-top:8px;font-family:inherit;font-weight:600}
+.cap-title{font-size:.72rem;font-weight:700;color:#f5a623;text-transform:uppercase;margin-bottom:8px;letter-spacing:.05em}
+.cap-text{background:#0f172a;border-radius:8px;padding:12px;font-size:.83rem;line-height:1.9;color:#cbd5e1;white-space:pre-wrap;word-break:break-word}
+.btn-copy{background:#334155;color:#e2e8f0;padding:8px 18px;border-radius:8px;border:none;cursor:pointer;font-size:.8rem;margin-top:8px;font-family:inherit;font-weight:600;transition:.15s}
 .btn-copy.ok{background:#22c55e;color:#fff}
 </style>
 </head>
 <body>
-<h1>🎨 Tạo ảnh quảng cáo</h1>
-<p class="sub">Tải về PNG và đăng Facebook / Zalo / TikTok</p>
+
+<h1>🎨 Ảnh quảng cáo</h1>
+<p class="sub">Tải về PNG → đăng Facebook / Zalo / TikTok</p>
 
 <div class="tabs">
-  <button class="tab on" onclick="setTab(0,this)">📢 Quảng cáo chính</button>
-  <button class="tab" onclick="setTab(1,this)">🏪 Tuyển quán đối tác</button>
+  <button class="tab on" onclick="setTab(0,this)">📢 Quảng cáo</button>
+  <button class="tab" onclick="setTab(1,this)">🏪 Tuyển quán</button>
   <button class="tab" onclick="setTab(2,this)">🛵 Tuyển tài xế</button>
-  <button class="tab" onclick="setTab(3,this)">📱 Story (dọc)</button>
+  <button class="tab" onclick="setTab(3,this)">📱 Story</button>
 </div>
 
-<div class="canvas-wrap">
-  <canvas id="cvs"></canvas>
+<div class="preview">
+  <div class="img-wrap" id="imgWrap"></div>
   <div class="btn-row">
-    <button class="btn btn-regen" onclick="draw()">🔄 Làm mới</button>
-    <button class="btn btn-dl" onclick="download()">⬇️ Tải PNG</button>
+    <button class="btn btn-dl" onclick="downloadSVG()">⬇️ Tải PNG</button>
+    <a class="btn btn-share" id="fbShare" href="#" target="_blank">📘 Chia sẻ FB</a>
   </div>
 </div>
 
-<!-- Caption -->
 <div class="caption-box">
-  <div class="caption-title">📝 Caption đăng kèm</div>
-  <div class="caption-text" id="captionText"></div>
+  <div class="cap-title">📝 Caption đăng kèm — copy và dán vào Facebook</div>
+  <div class="cap-text" id="capText"></div>
   <button class="btn-copy" id="btnCopy" onclick="copyCaption()">📋 Copy caption</button>
 </div>
 
 <script>
-const URL_APP = 'https://stellar-lamington-feff30.netlify.app';
-let currentTab = 0;
+const SITE = 'https://stellar-lamington-feff30.netlify.app';
+let tab = 0;
+
+const SVGS = [
+
+// 0 — QUẢNG CÁO CHÍNH
+`<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="g0" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#FF6B35"/>
+      <stop offset="100%" stop-color="#c94a15"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#g0)" rx="0"/>
+  <circle cx="1080" cy="80" r="220" fill="white" opacity=".1"/>
+  <circle cx="100" cy="560" r="170" fill="white" opacity=".08"/>
+  <text x="110" y="280" font-size="160" font-family="Segoe UI Emoji,sans-serif">🛵</text>
+  <text x="360" y="180" font-size="78" font-weight="900" font-family="Segoe UI,Arial" fill="white">GiaoHangDN</text>
+  <text x="362" y="240" font-size="36" font-family="Segoe UI,Arial" fill="rgba(255,255,255,.85)">Giao hàng nhanh tại Đà Nẵng</text>
+  <text x="362" y="320" font-size="33" font-family="Segoe UI,Arial" fill="white">✅  14+ quán ăn Đà Nẵng</text>
+  <text x="362" y="370" font-size="33" font-family="Segoe UI,Arial" fill="rgba(255,255,255,.9)">✅  Giao trong 20–35 phút</text>
+  <text x="362" y="420" font-size="33" font-family="Segoe UI,Arial" fill="rgba(255,255,255,.9)">✅  Tiền mặt / MoMo / Chuyển khoản</text>
+  <text x="362" y="470" font-size="33" font-family="Segoe UI,Arial" fill="rgba(255,255,255,.9)">✅  Theo dõi đơn hàng real-time</text>
+  <rect x="360" y="510" width="700" height="70" rx="14" fill="rgba(0,0,0,.28)"/>
+  <text x="710" y="554" font-size="30" font-family="monospace" fill="white" text-anchor="middle">stellar-lamington-feff30.netlify.app</text>
+  <text x="600" y="610" font-size="26" font-family="Segoe UI,Arial" fill="rgba(255,255,255,.55)" text-anchor="middle">#GiaoHangDN  #GiaoHàngĐàNẵng  #ĐồĂnĐàNẵng</text>
+</svg>`,
+
+// 1 — TUYỂN ĐỐI TÁC
+`<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="g1" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1a1a2e"/>
+      <stop offset="100%" stop-color="#16213e"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#g1)"/>
+  <rect width="1200" height="10" fill="#FF6B35"/>
+  <circle cx="1100" cy="320" r="300" fill="#FF6B35" opacity=".07"/>
+  <text x="80" y="260" font-size="150" font-family="Segoe UI Emoji,sans-serif">🤝</text>
+  <text x="320" y="160" font-size="52" font-weight="900" font-family="Segoe UI,Arial" fill="#f5a623">Hợp tác cùng GiaoHangDN</text>
+  <text x="322" y="215" font-size="30" font-family="Segoe UI,Arial" fill="#94a3b8">Nhận thêm đơn online – Không mất hoa hồng</text>
+  <rect x="318" y="245" width="820" height="60" rx="10" fill="rgba(255,107,53,.1)"/>
+  <text x="340" y="284" font-size="28" font-family="Segoe UI,Arial" fill="#e2e8f0">💰  Không mất 25% hoa hồng như Grab</text>
+  <rect x="318" y="315" width="820" height="60" rx="10" fill="rgba(255,107,53,.07)"/>
+  <text x="340" y="354" font-size="28" font-family="Segoe UI,Arial" fill="#e2e8f0">📱  Nhận đơn qua Telegram ngay lập tức</text>
+  <rect x="318" y="385" width="820" height="60" rx="10" fill="rgba(255,107,53,.1)"/>
+  <text x="340" y="424" font-size="28" font-family="Segoe UI,Arial" fill="#e2e8f0">🆓  Miễn phí 1 tháng đầu tiên</text>
+  <rect x="318" y="455" width="820" height="60" rx="10" fill="rgba(255,107,53,.07)"/>
+  <text x="340" y="494" font-size="28" font-family="Segoe UI,Arial" fill="#e2e8f0">⚡  Setup chỉ 30 phút – Dùng được ngay</text>
+  <rect x="318" y="535" width="480" height="68" rx="14" fill="#FF6B35"/>
+  <text x="558" y="578" font-size="30" font-weight="700" font-family="Segoe UI,Arial" fill="white" text-anchor="middle">Đăng ký miễn phí ngay →</text>
+  <text x="840" y="578" font-size="24" font-family="monospace" fill="rgba(255,255,255,.5)">stellar-lamington-feff30.netlify.app</text>
+</svg>`,
+
+// 2 — TUYỂN TÀI XẾ
+`<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="g2" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0d1b2a"/>
+      <stop offset="100%" stop-color="#1b2838"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#g2)"/>
+  <rect width="1200" height="10" fill="#22c55e"/>
+  <circle cx="150" cy="320" r="260" fill="#22c55e" opacity=".07"/>
+  <text x="900" y="420" font-size="200" font-family="Segoe UI Emoji,sans-serif" opacity=".4">🛵</text>
+  <text x="60" y="130" font-size="60" font-weight="900" font-family="Segoe UI,Arial" fill="#4ade80">TUYỂN TÀI XẾ</text>
+  <text x="60" y="190" font-size="38" font-family="Segoe UI,Arial" fill="white">Giao hàng Đà Nẵng – Part-time</text>
+  <rect x="60" y="220" width="460" height="110" rx="16" fill="rgba(34,197,94,.15)"/>
+  <text x="290" y="282" font-size="62" font-weight="900" font-family="Segoe UI,Arial" fill="#4ade80" text-anchor="middle">200k–400k</text>
+  <text x="290" y="318" font-size="26" font-family="Segoe UI,Arial" fill="#94a3b8" text-anchor="middle">thu nhập mỗi ngày</text>
+  <text x="60" y="385" font-size="30" font-family="Segoe UI,Arial" fill="white">⏰  Tự chọn giờ làm – không bị ép ca</text>
+  <text x="60" y="430" font-size="30" font-family="Segoe UI,Arial" fill="white">📱  Nhận đơn qua app trên điện thoại</text>
+  <text x="60" y="475" font-size="30" font-family="Segoe UI,Arial" fill="#94a3b8">💵  Hoa hồng 15% – trả ngay sau ca</text>
+  <text x="60" y="520" font-size="30" font-family="Segoe UI,Arial" fill="#94a3b8">✅  Chỉ cần xe máy + điện thoại</text>
+  <rect x="60" y="548" width="400" height="64" rx="14" fill="#22c55e"/>
+  <text x="260" y="589" font-size="30" font-weight="700" font-family="Segoe UI,Arial" fill="white" text-anchor="middle">Đăng ký ngay →</text>
+  <text x="60" y="618" font-size="22" font-family="monospace" fill="rgba(255,255,255,.35)">stellar-lamington-feff30.netlify.app</text>
+</svg>`,
+
+// 3 — STORY (1080x1920)
+`<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1920" viewBox="0 0 1080 1920">
+  <defs>
+    <linearGradient id="g3" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FF6B35"/>
+      <stop offset="60%" stop-color="#e55a25"/>
+      <stop offset="100%" stop-color="#c94a15"/>
+    </linearGradient>
+  </defs>
+  <rect width="1080" height="1920" fill="url(#g3)"/>
+  <circle cx="540" cy="200" r="380" fill="white" opacity=".09"/>
+  <circle cx="540" cy="1750" r="400" fill="white" opacity=".07"/>
+  <text x="540" y="580" font-size="320" font-family="Segoe UI Emoji,sans-serif" text-anchor="middle">🛵</text>
+  <text x="540" y="720" font-size="110" font-weight="900" font-family="Segoe UI,Arial" fill="white" text-anchor="middle">GiaoHangDN</text>
+  <text x="540" y="800" font-size="52" font-family="Segoe UI,Arial" fill="rgba(255,255,255,.88)" text-anchor="middle">Giao hàng nhanh tại Đà Nẵng</text>
+  <rect x="80" y="860" width="920" height="380" rx="28" fill="rgba(255,255,255,.18)"/>
+  <text x="160" y="960" font-size="52" font-family="Segoe UI,Arial" fill="white">✅  14+ quán ăn tại Đà Nẵng</text>
+  <text x="160" y="1040" font-size="52" font-family="Segoe UI,Arial" fill="white">⚡  Giao trong 20–35 phút</text>
+  <text x="160" y="1120" font-size="52" font-family="Segoe UI,Arial" fill="white">💳  Nhiều cách thanh toán</text>
+  <text x="160" y="1200" font-size="52" font-family="Segoe UI,Arial" fill="rgba(255,255,255,.85)">📦  Theo dõi đơn real-time</text>
+  <rect x="100" y="1300" width="880" height="90" rx="18" fill="rgba(0,0,0,.3)"/>
+  <text x="540" y="1358" font-size="40" font-family="monospace" fill="white" text-anchor="middle">stellar-lamington-feff30.netlify.app</text>
+  <text x="540" y="1480" font-size="54" font-weight="700" font-family="Segoe UI,Arial" fill="white" text-anchor="middle">👆 Đặt ngay – Link trong bio</text>
+  <text x="540" y="1580" font-size="42" font-family="Segoe UI,Arial" fill="rgba(255,255,255,.65)" text-anchor="middle">#GiaoHangDN  #ĐàNẵng  #ĐồĂn</text>
+</svg>`
+];
 
 const CAPTIONS = [
 `🛵 ĐẶT ĐỒ ĂN ĐÀ NẴNG – GIAO TẬN NHÀ
@@ -66,7 +174,7 @@ Chỉ cần 2 phút là có đồ ăn ngon giao đến cửa!
 ✅ Thanh toán tiền mặt / MoMo / chuyển khoản
 ✅ Theo dõi đơn hàng real-time
 
-👉 Đặt ngay: ${URL_APP}
+👉 Đặt ngay: ${SITE}
 
 #GiaoHangDN #GiaoHàngĐàNẵng #ĐồĂnĐàNẵng #FoodDelivery`,
 
@@ -74,316 +182,86 @@ Chỉ cần 2 phút là có đồ ăn ngon giao đến cửa!
 
 Muốn nhận thêm đơn online mà KHÔNG bị ăn hoa hồng 25%?
 
-GiaoHangDN cung cấp:
 🔹 Trang đặt hàng riêng cho quán bạn
 🔹 Nhận đơn qua Telegram – không bỏ lỡ
-🔹 Khách thanh toán thẳng cho quán – không qua trung gian
+🔹 Khách thanh toán thẳng cho quán
 🔹 Miễn phí 1 tháng đầu
 
-📲 Đăng ký miễn phí:
-${URL_APP.replace('https://','https://')}
+📲 Đăng ký: ${SITE}
 
-Nhắn tin cho mình để được hỗ trợ setup! 🙏
+Nhắn tin để được setup miễn phí! 🙏
 #QuánĂnĐàNẵng #BánHàngOnline #KinhDoanh`,
 
 `🛵 TUYỂN TÀI XẾ GIAO HÀNG – ĐÀ NẴNG
 
-💰 Thu nhập 200k – 400k / ngày
-⏰ Tự chọn giờ làm, không ép ca
-📱 Nhận đơn qua app trên điện thoại
-✅ Hoa hồng 15% – trả ngay sau mỗi ca
+💰 Thu nhập 200k–400k / ngày
+⏰ Tự chọn giờ – không ép ca
+📱 Nhận đơn qua app điện thoại
+✅ Có xe máy là đăng ký được
 
-Yêu cầu: Có xe máy + điện thoại smartphone
+📩 Nhắn tin đăng ký ngay!
 
-📩 Đăng ký: Nhắn tin cho mình ngay!
+#TuyểnTàiXế #LàmThêm #GiaoHàng #ĐàNẵng`,
 
-#TuyểnTàiXế #LàmThêm #GiaoHàng #ĐàNẵng #PartTime`,
+`🛵 Đặt đồ ăn Đà Nẵng chỉ 2 phút!
 
-`🛵 ĐẶT ĐỒ ĂN ĐÀ NẴNG
-Giao tận nhà – Nhanh 20 phút
+Link order trong bio 👆
+${SITE}
 
-14+ quán ăn • Giá từ 20k
-Đặt ngay 👇
-${URL_APP}
-
-#GiaoHangDN #ĐàNẵng`
+#GiaoHangDN #ĐàNẵng #FoodDelivery`
 ];
 
 function setTab(i, el) {
-  currentTab = i;
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('on'));
+  tab = i;
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
   el.classList.add('on');
-  draw();
-  document.getElementById('captionText').textContent = CAPTIONS[i];
+  renderImg();
+  document.getElementById('capText').textContent = CAPTIONS[i];
 }
 
-function draw() {
-  const cvs = document.getElementById('cvs');
-  const isStory = currentTab === 3;
-  cvs.width  = isStory ? 1080 : 1200;
-  cvs.height = isStory ? 1920 : 630;
-  const ctx = cvs.getContext('2d');
-  const w = cvs.width, h = cvs.height;
-
-  if (currentTab === 0) drawMain(ctx, w, h);
-  else if (currentTab === 1) drawPartner(ctx, w, h);
-  else if (currentTab === 2) drawDriver(ctx, w, h);
-  else drawStory(ctx, w, h);
+function renderImg() {
+  const blob = new Blob([SVGS[tab]], {type:'image/svg+xml'});
+  const url  = URL.createObjectURL(blob);
+  document.getElementById('imgWrap').innerHTML = `<img src="${url}" alt="Quảng cáo" style="border-radius:10px;max-width:100%">`;
+  document.getElementById('fbShare').href =
+    `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(SITE)}`;
 }
 
-function grad(ctx, w, h, c1, c2, vertical=false) {
-  const g = vertical
-    ? ctx.createLinearGradient(0,0,0,h)
-    : ctx.createLinearGradient(0,0,w,h);
-  g.addColorStop(0, c1);
-  g.addColorStop(1, c2);
-  return g;
-}
-
-function roundRect(ctx, x, y, w, h, r, fill) {
-  ctx.beginPath();
-  ctx.moveTo(x+r, y);
-  ctx.lineTo(x+w-r, y);
-  ctx.quadraticCurveTo(x+w, y, x+w, y+r);
-  ctx.lineTo(x+w, y+h-r);
-  ctx.quadraticCurveTo(x+w, y+h, x+w-r, y+h);
-  ctx.lineTo(x+r, y+h);
-  ctx.quadraticCurveTo(x, y+h, x, y+h-r);
-  ctx.lineTo(x, y+r);
-  ctx.quadraticCurveTo(x, y, x+r, y);
-  ctx.closePath();
-  ctx.fillStyle = fill;
-  ctx.fill();
-}
-
-// ── TAB 0: QUẢNG CÁO CHÍNH ──────────────────────────────
-function drawMain(ctx, w, h) {
-  // BG gradient
-  ctx.fillStyle = grad(ctx,w,h,'#FF6B35','#c94a15');
-  ctx.fillRect(0,0,w,h);
-
-  // Decorative circles
-  ctx.globalAlpha = .12;
-  ctx.fillStyle = '#fff';
-  ctx.beginPath(); ctx.arc(w-120,80,200,0,Math.PI*2); ctx.fill();
-  ctx.beginPath(); ctx.arc(80,h-80,160,0,Math.PI*2); ctx.fill();
-  ctx.globalAlpha = 1;
-
-  // White card
-  roundRect(ctx, 60, 60, w-120, h-120, 28, 'rgba(255,255,255,0.13)');
-
-  // Big emoji
-  ctx.font = `${w*0.14}px serif`;
-  ctx.textAlign = 'center';
-  ctx.fillStyle = '#fff';
-  ctx.fillText('🛵', w*0.18, h*0.42);
-
-  // Title
-  ctx.font = `bold ${w*0.062}px 'Segoe UI', Arial`;
-  ctx.fillStyle = '#fff';
-  ctx.textAlign = 'left';
-  ctx.fillText('GiaoHangDN', w*0.32, h*0.28);
-
-  ctx.font = `${w*0.032}px 'Segoe UI', Arial`;
-  ctx.fillStyle = 'rgba(255,255,255,0.88)';
-  ctx.fillText('Giao hàng nhanh tại Đà Nẵng', w*0.32, h*0.38);
-
-  // Features
-  const feats = ['✅ 14+ quán ăn Đà Nẵng', '✅ Giao trong 20–35 phút', '✅ Tiền mặt / MoMo / CK', '✅ Theo dõi real-time'];
-  ctx.font = `${w*0.028}px 'Segoe UI', Arial`;
-  feats.forEach((f,i) => {
-    ctx.fillStyle = i===0 ? '#fff' : 'rgba(255,255,255,.9)';
-    ctx.fillText(f, w*0.32, h*0.52 + i*h*0.1);
-  });
-
-  // URL badge
-  roundRect(ctx, w*0.3, h*0.78, w*0.58, h*0.1, 14, 'rgba(0,0,0,.25)');
-  ctx.font = `bold ${w*0.026}px monospace`;
-  ctx.fillStyle = '#fff';
-  ctx.textAlign = 'center';
-  ctx.fillText(URL_APP.replace('https://',''), w*0.59, h*0.845);
-
-  // Hashtags
-  ctx.font = `${w*0.022}px 'Segoe UI', Arial`;
-  ctx.fillStyle = 'rgba(255,255,255,.6)';
-  ctx.fillText('#GiaoHangDN  #ĐàNẵng  #GiaoHàng', w/2, h-38);
-}
-
-// ── TAB 1: TUYỂN ĐỐI TÁC ──────────────────────────────
-function drawPartner(ctx, w, h) {
-  ctx.fillStyle = grad(ctx,w,h,'#1a1a2e','#16213e');
-  ctx.fillRect(0,0,w,h);
-
-  // Top bar
-  ctx.fillStyle = '#FF6B35';
-  ctx.fillRect(0,0,w,12);
-
-  // Decorative
-  ctx.globalAlpha=.06; ctx.fillStyle='#FF6B35';
-  ctx.beginPath(); ctx.arc(w-60,h/2,280,0,Math.PI*2); ctx.fill();
-  ctx.globalAlpha=1;
-
-  // Icon
-  ctx.font = `${w*0.12}px serif`;
-  ctx.textAlign='center';
-  ctx.fillText('🤝', w*0.14, h*0.38);
-
-  // Title
-  ctx.textAlign='left';
-  ctx.font=`bold ${w*0.05}px 'Segoe UI',Arial`;
-  ctx.fillStyle='#f5a623';
-  ctx.fillText('Hợp tác cùng', w*0.26, h*0.26);
-  ctx.fillStyle='#fff';
-  ctx.fillText('GiaoHangDN', w*0.26, h*0.38);
-
-  ctx.font=`${w*0.028}px 'Segoe UI',Arial`;
-  ctx.fillStyle='#94a3b8';
-  ctx.fillText('Nhận thêm đơn online – Không mất hoa hồng', w*0.26, h*0.48);
-
-  // Benefits
-  const items=[
-    ['💰','Không mất 25% hoa hồng như Grab'],
-    ['📱','Nhận đơn qua Telegram ngay lập tức'],
-    ['🆓','Miễn phí 1 tháng đầu'],
-    ['⚡','Setup chỉ 30 phút'],
-  ];
-  items.forEach(([ico,txt],i)=>{
-    const y = h*0.58+i*h*0.09;
-    roundRect(ctx, w*0.26, y-h*0.045, w*0.64, h*0.072, 10, 'rgba(255,107,53,0.1)');
-    ctx.font=`${w*0.032}px serif`; ctx.fillText(ico, w*0.285, y+4);
-    ctx.font=`${w*0.026}px 'Segoe UI',Arial`; ctx.fillStyle='#e2e8f0';
-    ctx.fillText(txt, w*0.33, y+4);
-  });
-
-  // CTA
-  roundRect(ctx, w*0.26, h*0.88, w*0.48, h*0.085, 14, '#FF6B35');
-  ctx.font=`bold ${w*0.03}px 'Segoe UI',Arial`;
-  ctx.fillStyle='#fff'; ctx.textAlign='center';
-  ctx.fillText('Đăng ký miễn phí ngay →', w*0.5, h*0.932);
-
-  ctx.font=`${w*0.022}px monospace`;
-  ctx.fillStyle='rgba(255,255,255,.5)';
-  ctx.fillText(URL_APP, w*0.5, h-28);
-}
-
-// ── TAB 2: TUYỂN TÀI XẾ ──────────────────────────────
-function drawDriver(ctx, w, h) {
-  ctx.fillStyle = grad(ctx,w,h,'#0f2027','#203a43','#2c5364'.split(',')[0]);
-  ctx.fillStyle = grad(ctx,w,h,'#1a1a2e','#0d2137');
-  ctx.fillRect(0,0,w,h);
-  ctx.fillStyle='#22c55e'; ctx.fillRect(0,0,w,12);
-
-  ctx.globalAlpha=.07; ctx.fillStyle='#22c55e';
-  ctx.beginPath(); ctx.arc(100,h/2,250,0,Math.PI*2); ctx.fill();
-  ctx.globalAlpha=1;
-
-  ctx.font=`${w*0.14}px serif`; ctx.textAlign='center';
-  ctx.fillText('🛵', w*0.82, h*0.42);
-
-  ctx.textAlign='left';
-  ctx.font=`bold ${w*0.048}px 'Segoe UI',Arial`;
-  ctx.fillStyle='#4ade80';
-  ctx.fillText('TUYỂN TÀI XẾ', w*0.06, h*0.2);
-  ctx.fillStyle='#fff';
-  ctx.font=`bold ${w*0.038}px 'Segoe UI',Arial`;
-  ctx.fillText('Giao hàng Đà Nẵng', w*0.06, h*0.31);
-
-  // Earnings badge
-  roundRect(ctx, w*0.06, h*0.38, w*0.44, h*0.13, 14, 'rgba(34,197,94,0.15)');
-  ctx.font=`bold ${w*0.048}px 'Segoe UI',Arial`;
-  ctx.fillStyle='#4ade80'; ctx.textAlign='center';
-  ctx.fillText('200k–400k', w*0.28, h*0.47);
-  ctx.font=`${w*0.024}px 'Segoe UI',Arial`;
-  ctx.fillStyle='#94a3b8';
-  ctx.fillText('thu nhập / ngày', w*0.28, h*0.5);
-
-  const items=['⏰ Tự chọn giờ làm','📱 Nhận đơn qua app','💵 Hoa hồng 15% / đơn','✅ Có xe máy là được'];
-  ctx.textAlign='left';
-  items.forEach((t,i)=>{
-    ctx.font=`${w*0.026}px 'Segoe UI',Arial`;
-    ctx.fillStyle= i<2?'#e2e8f0':'#94a3b8';
-    ctx.fillText(t, w*0.06, h*0.6+i*h*0.085);
-  });
-
-  roundRect(ctx, w*0.06, h*0.88, w*0.4, h*0.082, 14, '#22c55e');
-  ctx.font=`bold ${w*0.028}px 'Segoe UI',Arial`;
-  ctx.fillStyle='#fff'; ctx.textAlign='center';
-  ctx.fillText('Đăng ký ngay →', w*0.26, h*0.932);
-
-  ctx.font=`${w*0.021}px monospace`;
-  ctx.fillStyle='rgba(255,255,255,.4)'; ctx.textAlign='left';
-  ctx.fillText(URL_APP, w*0.06, h-26);
-}
-
-// ── TAB 3: STORY ──────────────────────────────────────
-function drawStory(ctx, w, h) {
-  // Gradient BG
-  ctx.fillStyle = grad(ctx,w,h,'#FF6B35','#c94a15',true);
-  ctx.fillRect(0,0,w,h);
-
-  ctx.globalAlpha=.1; ctx.fillStyle='#fff';
-  ctx.beginPath(); ctx.arc(w/2,h*0.15,300,0,Math.PI*2); ctx.fill();
-  ctx.beginPath(); ctx.arc(w/2,h*0.85,350,0,Math.PI*2); ctx.fill();
-  ctx.globalAlpha=1;
-
-  // Big emoji
-  ctx.font=`${w*0.28}px serif`; ctx.textAlign='center';
-  ctx.fillText('🛵', w/2, h*0.3);
-
-  ctx.font=`bold ${w*0.1}px 'Segoe UI',Arial`;
-  ctx.fillStyle='#fff';
-  ctx.fillText('GiaoHangDN', w/2, h*0.42);
-
-  ctx.font=`${w*0.052}px 'Segoe UI',Arial`;
-  ctx.fillStyle='rgba(255,255,255,.9)';
-  ctx.fillText('Giao hàng Đà Nẵng', w/2, h*0.5);
-
-  // White card
-  roundRect(ctx, w*0.08, h*0.54, w*0.84, h*0.25, 24, 'rgba(255,255,255,0.18)');
-  const feats=['✅ 14+ quán ăn','⚡ Giao 20–35 phút','💳 Nhiều cách thanh toán'];
-  feats.forEach((f,i)=>{
-    ctx.font=`${w*0.048}px 'Segoe UI',Arial`;
-    ctx.fillStyle='#fff';
-    ctx.fillText(f, w/2, h*0.601+i*h*0.072);
-  });
-
-  // URL
-  roundRect(ctx, w*0.1, h*0.82, w*0.8, h*0.07, 18, 'rgba(0,0,0,.3)');
-  ctx.font=`bold ${w*0.038}px monospace`;
-  ctx.fillStyle='#fff';
-  ctx.fillText(URL_APP.replace('https://',''), w/2, h*0.862);
-
-  ctx.font=`${w*0.038}px 'Segoe UI',Arial`;
-  ctx.fillStyle='rgba(255,255,255,.7)';
-  ctx.fillText('👆 Link trong bio', w/2, h*0.93);
-}
-
-function download() {
-  const cvs = document.getElementById('cvs');
-  const names = ['quang-cao-chinh','tuyen-doi-tac','tuyen-tai-xe','story'];
-  const a = document.createElement('a');
-  a.download = `GiaoHangDN_${names[currentTab]}.png`;
-  a.href = cvs.toDataURL('image/png');
-  a.click();
+function downloadSVG() {
+  const names = ['quang-cao','tuyen-quan','tuyen-tai-xe','story'];
+  // Convert SVG to PNG via canvas
+  const img = new Image();
+  const blob = new Blob([SVGS[tab]], {type:'image/svg+xml;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  img.onload = function() {
+    const cvs = document.createElement('canvas');
+    cvs.width = img.naturalWidth || (tab===3?1080:1200);
+    cvs.height = img.naturalHeight || (tab===3?1920:630);
+    cvs.getContext('2d').drawImage(img, 0, 0);
+    const a = document.createElement('a');
+    a.download = `GiaoHangDN_${names[tab]}.png`;
+    a.href = cvs.toDataURL('image/png');
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+  img.src = url;
 }
 
 function copyCaption() {
-  const text = document.getElementById('captionText').textContent;
+  const text = document.getElementById('capText').textContent;
   navigator.clipboard.writeText(text).then(()=>{
-    const btn = document.getElementById('btnCopy');
-    btn.textContent='✅ Đã copy!'; btn.classList.add('ok');
-    setTimeout(()=>{ btn.textContent='📋 Copy caption'; btn.classList.remove('ok'); },2000);
+    const b = document.getElementById('btnCopy');
+    b.textContent='✅ Đã copy!'; b.classList.add('ok');
+    setTimeout(()=>{b.textContent='📋 Copy caption';b.classList.remove('ok');},2000);
   }).catch(()=>{
-    const r=document.createRange(); r.selectNode(document.getElementById('captionText'));
+    const r=document.createRange(); r.selectNode(document.getElementById('capText'));
     window.getSelection().removeAllRanges(); window.getSelection().addRange(r);
     document.execCommand('copy');
-    window.getSelection().removeAllRanges();
   });
 }
 
-// Init
-draw();
-document.getElementById('captionText').textContent = CAPTIONS[0];
+renderImg();
+document.getElementById('capText').textContent = CAPTIONS[0];
 </script>
 </body>
 </html>
