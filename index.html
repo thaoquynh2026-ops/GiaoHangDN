@@ -42,6 +42,12 @@
   <div class="search-box">
     <input type="text" id="searchInput" placeholder="🔍 Tìm quán ăn, món ăn..." oninput="onSearch()">
   </div>
+  <div class="trust-badges">
+    <span class="trust-badge">🏪 20+ quán</span>
+    <span class="trust-badge">⚡ Giao 30 phút</span>
+    <span class="trust-badge">💳 3 cách thanh toán</span>
+    <span class="trust-badge">🎟️ Có mã giảm giá</span>
+  </div>
 </div>
 
 <!-- Tabs -->
@@ -89,7 +95,8 @@
   </div>
   <div class="cart-footer">
     <div class="cart-total-row"><span>Tạm tính:</span><span id="subTotal">0đ</span></div>
-    <div class="cart-total-row"><span>Phí giao hàng:</span><span>15.000đ</span></div>
+    <div class="cart-total-row"><span>Phí giao hàng:</span><span id="shipFeeDisplay">15.000đ</span></div>
+    <div class="cart-total-row" id="discountRow" style="display:none;color:#16a34a;font-weight:600"><span>Giảm giá 🎟️:</span><span id="discountDisplay">-0đ</span></div>
     <div class="cart-total-row bold"><span>Tổng cộng:</span><span id="totalPrice">0đ</span></div>
     <button class="btn-primary mt10" onclick="showCheckout()">Đặt hàng ngay →</button>
   </div>
@@ -104,6 +111,12 @@
       <input type="tel" id="custPhone" placeholder="Số điện thoại *" class="form-input">
       <input type="text" id="custAddress" placeholder="Địa chỉ giao hàng *" class="form-input">
       <textarea id="custNote" placeholder="Ghi chú cho tài xế (không bắt buộc)" class="form-input" rows="2"></textarea>
+
+      <div class="voucher-row">
+        <input type="text" id="voucherInput" placeholder="🎟️ Nhập mã giảm giá..." class="form-input" style="margin-bottom:0;text-transform:uppercase">
+        <button onclick="doApplyVoucher()" class="btn-voucher">Áp dụng</button>
+      </div>
+      <div id="voucherMsg" style="font-size:.82rem;margin:4px 0 8px;min-height:18px"></div>
 
       <div class="section-title" style="margin-top:12px">💳 Phương thức thanh toán</div>
       <div class="pay-options">
@@ -150,8 +163,12 @@
     <h2 style="color:#22c55e;margin-bottom:8px">Đặt hàng thành công!</h2>
     <div id="successOrderId" style="font-size:1.3rem;font-weight:700;color:#FF6B35;margin:10px 0"></div>
     <div id="successSummary" style="background:#f8fafc;border-radius:10px;padding:14px;margin:12px 0;text-align:left;font-size:.9rem"></div>
-    <p style="color:#64748b;margin-bottom:6px">🛵 Tài xế sẽ đến trong <strong>20–30 phút</strong></p>
-    <p style="color:#64748b;font-size:.85rem">Theo dõi đơn tại tab <strong>Theo dõi đơn</strong></p>
+    <div class="delivery-countdown">
+      <div style="font-size:.85rem;color:#64748b;margin-bottom:6px">🛵 Dự kiến giao hàng trong</div>
+      <div id="countdownTimer" style="font-size:2rem;font-weight:700;color:#FF6B35">30:00</div>
+      <div style="font-size:.78rem;color:#94a3b8;margin-top:4px">phút</div>
+    </div>
+    <p style="color:#64748b;font-size:.85rem;margin-top:8px">Theo dõi đơn tại tab <strong>Theo dõi đơn</strong></p>
     <button onclick="closeSuccess()" class="btn-primary mt10">OK, tiếp tục mua sắm</button>
   </div>
 </div>
@@ -169,7 +186,9 @@ let searchQuery = '';
 let selectedPay = 'cash';
 let map = null;
 let mapInitialized = false;
-let pendingOrderData = null; // holds customer info while on step2
+let pendingOrderData = null;
+let appliedVoucher = null; // { code, discount, shipDiscount, desc }
+let countdownInterval = null;
 
 // ─── RESTAURANTS ───
 function renderRestaurants() {
@@ -266,16 +285,16 @@ function addToCart(restId, itemId, btn) {
 
   updateCartUI();
 
-  // Visual feedback on the button
   const orig = btn.textContent;
   btn.textContent = '✓ Đã thêm';
   btn.style.background = '#22c55e';
   btn.disabled = true;
-  setTimeout(() => {
-    btn.textContent = orig;
-    btn.style.background = '';
-    btn.disabled = false;
-  }, 900);
+  setTimeout(() => { btn.textContent = orig; btn.style.background = ''; btn.disabled = false; }, 900);
+
+  // Pulse cart button
+  const cartBtn = document.querySelector('.cart-btn');
+  cartBtn.classList.add('has-items');
+  setTimeout(() => cartBtn.classList.remove('has-items'), 400);
 }
 
 function changeQty(id, delta) {
@@ -292,11 +311,22 @@ function changeQty(id, delta) {
 function updateCartUI() {
   const count = cart.reduce((s, x) => s + x.qty, 0);
   const sub   = cart.reduce((s, x) => s + x.price * x.qty, 0);
-  const total = sub + 15000;
+  const shipFee = 15000 - (appliedVoucher?.shipDiscount || 0);
+  const itemDiscount = appliedVoucher?.discount || 0;
+  const total = sub + shipFee - itemDiscount;
 
   document.getElementById('cartCount').textContent = count;
   document.getElementById('subTotal').textContent  = formatPrice(sub);
-  document.getElementById('totalPrice').textContent = formatPrice(total);
+  document.getElementById('shipFeeDisplay').textContent = shipFee === 0 ? 'Miễn phí 🎉' : formatPrice(shipFee);
+  document.getElementById('totalPrice').textContent = formatPrice(Math.max(total, 0));
+
+  const discRow = document.getElementById('discountRow');
+  if (itemDiscount > 0) {
+    discRow.style.display = 'flex';
+    document.getElementById('discountDisplay').textContent = '-' + formatPrice(itemDiscount);
+  } else {
+    discRow.style.display = 'none';
+  }
 
   // Restaurant tag
   if (selectedRestaurantId) {
@@ -338,15 +368,34 @@ function closeCart() {
 }
 
 // ─── CHECKOUT ───
-function showCheckout() {
-  if (cart.length === 0) {
-    alert('Vui lòng thêm ít nhất 1 món vào giỏ hàng!');
-    return;
+// ─── VOUCHER ───
+function doApplyVoucher() {
+  const code = document.getElementById('voucherInput').value.trim();
+  const sub  = cart.reduce((s, x) => s + x.price * x.qty, 0);
+  const msgEl = document.getElementById('voucherMsg');
+  if (!code) { msgEl.innerHTML = '<span style="color:#dc2626">Nhập mã giảm giá trước!</span>'; return; }
+  const result = applyVoucher(code, sub);
+  if (!result.ok) {
+    msgEl.innerHTML = `<span style="color:#dc2626">${result.msg}</span>`;
+    appliedVoucher = null;
+  } else {
+    appliedVoucher = { code: code.toUpperCase(), ...result };
+    msgEl.innerHTML = `<span style="color:#16a34a">✅ ${result.desc}</span>`;
+    updateCartUI();
+    updateCheckoutPreview();
   }
+}
 
-  const sub   = cart.reduce((s, x) => s + x.price * x.qty, 0);
-  const total = sub + 15000;
-
+function updateCheckoutPreview() {
+  const sub = cart.reduce((s, x) => s + x.price * x.qty, 0);
+  const shipFee = 15000 - (appliedVoucher?.shipDiscount || 0);
+  const itemDiscount = appliedVoucher?.discount || 0;
+  const total = Math.max(sub + shipFee - itemDiscount, 0);
+  const discountLine = itemDiscount > 0
+    ? `<div class="preview-row" style="color:#16a34a"><span>🎟️ Giảm giá</span><span>-${formatPrice(itemDiscount)}</span></div>` : '';
+  const shipLine = shipFee === 0
+    ? `<div class="preview-row" style="color:#16a34a"><span>Phí giao hàng</span><span>Miễn phí 🎉</span></div>`
+    : `<div class="preview-row"><span>Phí giao hàng</span><span>${formatPrice(shipFee)}</span></div>`;
   document.getElementById('orderPreview').innerHTML = `
     <div class="preview-box" style="margin-top:12px">
       ${cart.map(i => `
@@ -356,13 +405,28 @@ function showCheckout() {
         </div>
       `).join('')}
       <div class="preview-row" style="border-top:1px solid #e2e8f0;margin-top:6px;padding-top:8px">
-        <span>Phí giao hàng</span><span>15.000đ</span>
+        ${shipLine}
       </div>
+      ${discountLine}
       <div class="preview-row" style="font-weight:700;font-size:1rem">
         <span>Tổng cộng</span><span style="color:#FF6B35">${formatPrice(total)}</span>
       </div>
     </div>
   `;
+}
+
+function showCheckout() {
+  if (cart.length === 0) {
+    alert('Vui lòng thêm ít nhất 1 món vào giỏ hàng!');
+    return;
+  }
+
+  const sub   = cart.reduce((s, x) => s + x.price * x.qty, 0);
+  const shipFee = 15000 - (appliedVoucher?.shipDiscount || 0);
+  const itemDiscount = appliedVoucher?.discount || 0;
+  const total = Math.max(sub + shipFee - itemDiscount, 0);
+
+  updateCheckoutPreview();
 
   // Show modal, reset to step 1
   document.getElementById('checkoutModal').classList.add('show');
@@ -393,10 +457,11 @@ function goToPayment() {
   if (!phone)   { alert('Vui lòng nhập số điện thoại!');  document.getElementById('custPhone').focus();   return; }
   if (!address) { alert('Vui lòng nhập địa chỉ giao!');   document.getElementById('custAddress').focus(); return; }
 
-  // Save for later use in confirmPayment
   pendingOrderData = { name, phone, address, note };
 
-  const total = cart.reduce((s, x) => s + x.price * x.qty, 0) + 15000;
+  const sub  = cart.reduce((s, x) => s + x.price * x.qty, 0);
+  const shipFee = 15000 - (appliedVoucher?.shipDiscount || 0);
+  const total = Math.max(sub + shipFee - (appliedVoucher?.discount || 0), 0);
   let html = '';
 
   if (selectedPay === 'momo') {
@@ -459,7 +524,9 @@ function confirmPayment() {
   if (!pendingOrderData) return;
   const { name, phone, address, note } = pendingOrderData;
   const rest  = RESTAURANTS.find(r => r.id === selectedRestaurantId);
-  const total = cart.reduce((s, x) => s + x.price * x.qty, 0) + 15000;
+  const sub   = cart.reduce((s, x) => s + x.price * x.qty, 0);
+  const shipFee = 15000 - (appliedVoucher?.shipDiscount || 0);
+  const total = Math.max(sub + shipFee - (appliedVoucher?.discount || 0), 0);
 
   const order = {
     id:             genOrderId(),
@@ -470,6 +537,8 @@ function confirmPayment() {
     items:          [...cart],
     restaurantName: rest ? rest.name : '',
     total,
+    voucher:        appliedVoucher?.code || '',
+    discount:       (appliedVoucher?.discount || 0) + (appliedVoucher?.shipDiscount || 0),
     payMethod:      selectedPay,
     status:         'pending',
     time:           new Date().toLocaleString('vi-VN'),
@@ -488,24 +557,39 @@ function confirmPayment() {
     <div><strong>💳 Thanh toán:</strong> ${payLabel[selectedPay]}</div>
   `;
 
-  // Lưu đơn (Firebase hoặc localStorage) + thông báo Telegram
   pushOrder(order);
   sendTelegramAlert(order);
 
-  // Reset cart & close modals
   cart = [];
   selectedRestaurantId = null;
   pendingOrderData = null;
+  appliedVoucher = null;
+  document.getElementById('voucherInput').value = '';
+  document.getElementById('voucherMsg').innerHTML = '';
   updateCartUI();
   closeCheckout();
 
-  // Show success
+  // Countdown 30 phút
+  let secs = 30 * 60;
+  clearInterval(countdownInterval);
+  function tick() {
+    const m = String(Math.floor(secs / 60)).padStart(2,'0');
+    const s = String(secs % 60).padStart(2,'0');
+    const el = document.getElementById('countdownTimer');
+    if (el) el.textContent = m + ':' + s;
+    if (secs <= 0) { clearInterval(countdownInterval); if (el) el.textContent = '🎉 Đã đến!'; return; }
+    secs--;
+  }
+  tick();
+  countdownInterval = setInterval(tick, 1000);
+
   document.getElementById('successModal').classList.add('show');
 }
 
 function closeSuccess() {
+  clearInterval(countdownInterval);
   document.getElementById('successModal').classList.remove('show');
-  renderRestaurants(); // refresh UI
+  renderRestaurants();
 }
 
 // ─── TRACK ORDERS ───

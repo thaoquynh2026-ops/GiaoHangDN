@@ -222,6 +222,23 @@ input:checked + .slider:before { transform: translateX(22px); }
 .text-center { text-align: center; }
 .text-gray { color: var(--gray); font-size: .88rem; }
 
+/* Trust badges in banner */
+.trust-badges { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 14px; }
+.trust-badge { background: rgba(255,255,255,.2); color: white; padding: 5px 12px; border-radius: 20px; font-size: .78rem; font-weight: 600; backdrop-filter: blur(4px); border: 1px solid rgba(255,255,255,.3); }
+
+/* Voucher row */
+.voucher-row { display: flex; gap: 8px; margin-bottom: 4px; }
+.voucher-row .form-input { flex: 1; margin-bottom: 0; }
+.btn-voucher { background: #FF6B35; color: white; border: none; padding: 0 16px; border-radius: 10px; font-weight: 700; font-size: .88rem; cursor: pointer; white-space: nowrap; }
+.btn-voucher:hover { background: #e55a25; }
+
+/* Delivery countdown */
+.delivery-countdown { background: linear-gradient(135deg, #fff7ed, #ffedd5); border: 2px solid #fed7aa; border-radius: 14px; padding: 14px; margin: 12px 0; }
+
+/* Cart count pulse */
+@keyframes pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.3)} }
+.cart-btn.has-items { animation: pulse .4s ease; }
+
 @media (max-width: 600px) {
   .banner h1 { font-size: 1.3rem; }
   .stats-row { grid-template-columns: repeat(2,1fr); }

@@ -116,10 +116,43 @@ const RESTAURANTS = [
     items:[{id:1301,name:'Trà chanh sả gừng',price:25000,emoji:'🍋'},{id:1302,name:'Trà đào cam sả',price:30000,emoji:'🍑'},{id:1303,name:'Nước ép cam tươi',price:35000,emoji:'🍊'},{id:1304,name:'Sinh tố bơ',price:40000,emoji:'🥑'}]},
   { id:14, name:'Kem Bơ Đà Nẵng',         emoji:'🍦', cat:'drink',  address:'61 Bạch Đằng, Hải Châu',           lat:16.0680, lng:108.2244, rating:4.8, time:'15-25 phút',
     items:[{id:1401,name:'Kem bơ 1 ly',price:35000,emoji:'🥑'},{id:1402,name:'Sinh tố xoài dừa',price:40000,emoji:'🥭'},{id:1403,name:'Kem dừa nướng',price:45000,emoji:'🥥'},{id:1404,name:'Chè ba màu',price:30000,emoji:'🍨'}]},
+  { id:15, name:'Bún Đậu Mắm Tôm',        emoji:'🫘', cat:'food',   address:'38 Nguyễn Thị Minh Khai, Hải Châu', lat:16.0655, lng:108.2160, rating:4.6, time:'15-25 phút',
+    items:[{id:1501,name:'Bún đậu mắm tôm đặc biệt',price:60000,emoji:'🫘'},{id:1502,name:'Bún đậu chả cốm',price:55000,emoji:'🟢'},{id:1503,name:'Nem cuốn tôm thịt',price:45000,emoji:'🌿'},{id:1504,name:'Đậu hũ chiên giòn',price:35000,emoji:'🟡'}]},
+  { id:16, name:'Lẩu Hải Sản Đà Nẵng',   emoji:'🦞', cat:'food',   address:'09 Trần Hưng Đạo, Sơn Trà',         lat:16.0790, lng:108.2370, rating:4.7, time:'30-45 phút',
+    items:[{id:1601,name:'Lẩu hải sản thập cẩm (2 người)',price:280000,emoji:'🦞'},{id:1602,name:'Lẩu tôm cua (1 người)',price:150000,emoji:'🦀'},{id:1603,name:'Cháo hải sản',price:65000,emoji:'🍲'},{id:1604,name:'Gỏi tôm xoài xanh',price:75000,emoji:'🥗'}]},
+  { id:17, name:'Circle K Đà Nẵng',       emoji:'🏪', cat:'shop',   address:'250 Võ Nguyên Giáp, Ngũ Hành Sơn', lat:16.0290, lng:108.2490, rating:4.2, time:'20-35 phút',
+    items:[{id:1701,name:'Xúc xích Circle K',price:20000,emoji:'🌭'},{id:1702,name:'Sandwich gà',price:35000,emoji:'🥪'},{id:1703,name:'Cà phê lon Highlands',price:15000,emoji:'☕'},{id:1704,name:'Combo snack 3 gói',price:25000,emoji:'🍿'},{id:1705,name:'Nước tăng lực Sting',price:12000,emoji:'⚡'}]},
+  { id:18, name:'Bánh Cuốn Bà Cẩm',       emoji:'🫔', cat:'food',   address:'11 Hoàng Diệu, Hải Châu',           lat:16.0715, lng:108.2188, rating:4.8, time:'15-25 phút',
+    items:[{id:1801,name:'Bánh cuốn nhân thịt',price:40000,emoji:'🫔'},{id:1802,name:'Bánh cuốn trứng',price:45000,emoji:'🥚'},{id:1803,name:'Bánh ướt chả lụa',price:38000,emoji:'🍥'},{id:1804,name:'Bánh cuốn chay',price:30000,emoji:'🌱'}]},
+  { id:19, name:'Hủ Tiếu Nam Vang',       emoji:'🍜', cat:'food',   address:'72 Trường Chinh, Thanh Khê',        lat:16.0855, lng:108.1960, rating:4.5, time:'20-30 phút',
+    items:[{id:1901,name:'Hủ tiếu Nam Vang đặc biệt',price:65000,emoji:'🍜'},{id:1902,name:'Hủ tiếu khô tôm thịt',price:60000,emoji:'🍝'},{id:1903,name:'Hủ tiếu bò viên',price:55000,emoji:'🥩'},{id:1904,name:'Cháo huyết',price:35000,emoji:'🍚'}]},
+  { id:20, name:'Starbucks Đà Nẵng',      emoji:'☕', cat:'drink',  address:'280 Võ Nguyên Giáp, Ngũ Hành Sơn', lat:16.0277, lng:108.2502, rating:4.4, time:'25-40 phút',
+    items:[{id:2001,name:'Caramel Macchiato',price:85000,emoji:'☕'},{id:2002,name:'Matcha Frappuccino',price:95000,emoji:'🍵'},{id:2003,name:'Americano đá',price:70000,emoji:'🧊'},{id:2004,name:'Bánh croissant',price:55000,emoji:'🥐'},{id:2005,name:'Cheesecake',price:75000,emoji:'🍰'}]},
 ];
 
 const BANK_INFO  = { bank:'Vietcombank', account:'0123456789', name:'NGUYEN ANH TUAN', branch:'Chi nhánh Đà Nẵng' };
 const MOMO_INFO  = { phone:'0987654321', name:'NGUYEN ANH TUAN' };
+
+// ── Mã giảm giá ───────────────────────────────────────
+const VOUCHERS = {
+  'GIAOHANGDN10': { type:'percent', value:10, maxDiscount:30000, minOrder:0,   desc:'Giảm 10% (tối đa 30k)' },
+  'GIAMGIA20':    { type:'fixed',   value:20000,                 minOrder:100000, desc:'Giảm 20.000đ cho đơn từ 100k' },
+  'MIENPHI':      { type:'ship',    value:15000,                 minOrder:0,   desc:'Miễn phí giao hàng' },
+  'NEWUSER':      { type:'fixed',   value:30000,                 minOrder:80000,  desc:'Tặng 30k cho khách mới' },
+  'DANANG2026':   { type:'percent', value:15, maxDiscount:50000, minOrder:0,   desc:'Giảm 15% nhân dịp khai trương' },
+};
+
+function applyVoucher(code, subtotal) {
+  const v = VOUCHERS[code.toUpperCase().trim()];
+  if (!v) return { ok:false, msg:'Mã không hợp lệ ❌' };
+  if (subtotal < v.minOrder) return { ok:false, msg:`Đơn tối thiểu ${formatPrice(v.minOrder)} để dùng mã này` };
+  let discount = 0;
+  let shipDiscount = 0;
+  if (v.type === 'percent') discount = Math.min(Math.round(subtotal * v.value / 100), v.maxDiscount || 999999);
+  else if (v.type === 'fixed') discount = v.value;
+  else if (v.type === 'ship') shipDiscount = v.value;
+  return { ok:true, discount, shipDiscount, desc:v.desc };
+}
 
 // ── Telegram thông báo đơn mới ────────────────────────
 const TG_CONFIG = { token: '', chatId: '' }; // điền token và chatId của bot Telegram
