@@ -2,15 +2,22 @@
   "name": "GiaoHangDN – Giao hàng Đà Nẵng",
   "short_name": "GiaoHangDN",
   "description": "Đặt đồ ăn, giao hàng nhanh tại Đà Nẵng",
-  "start_url": "/GiaoHangDN/index.html",
+  "start_url": "./index.html",
+  "scope": "./",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#FF6B35",
-  "orientation": "portrait",
+  "orientation": "portrait-primary",
   "icons": [
-    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
-    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "screenshots": [
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "form_factor": "narrow" }
   ],
   "categories": ["food", "lifestyle", "shopping"],
-  "lang": "vi"
+  "lang": "vi",
+  "dir": "ltr"
 }
